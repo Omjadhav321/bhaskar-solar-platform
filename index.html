@@ -2,163 +2,1649 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#F4A523">
-    <title>Bhaskar Solar</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Bhaskar Solar">
+    <meta name="description" content="Bhaskar Solar Management Platform - Manage your solar installations">
+    <title>Bhaskar Solar Management Platform</title>
     <link rel="stylesheet" href="css/style.css">
-    <link rel="icon" href="icons/icon-192.svg">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.svg">
+    <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg">
 </head>
 <body>
-    <div id="app">
-        <!-- Login Page -->
-        <div id="loginPage" class="page active">
-            <div class="login-box">
-                <div class="logo">
-                    <svg viewBox="0 0 60 60" class="sun"><circle cx="30" cy="30" r="18" fill="#FFD93D"/><g stroke="#FFD93D" stroke-width="3"><line x1="30" y1="5" x2="30" y2="12"/><line x1="30" y1="48" x2="30" y2="55"/><line x1="5" y1="30" x2="12" y2="30"/><line x1="48" y1="30" x2="55" y2="30"/></g></svg>
-                    <h1>Bhaskar Solar</h1>
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
+
+    <!-- Mobile Slide-out Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-header" style="padding: 20px; border-bottom: 1px solid var(--light);">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="contact-avatar" style="background: var(--primary);">
+                    <span id="mobileUserInitials">AS</span>
                 </div>
-                <div class="tabs">
-                    <button class="tab active" data-tab="customer">Customer</button>
-                    <button class="tab" data-tab="vendor">Vendor</button>
+                <div>
+                    <div style="font-weight: 600;" id="mobileUserName">Alex Smith</div>
+                    <div style="font-size: 0.8rem; color: var(--gray);">Customer</div>
                 </div>
-                <form id="customerForm" class="form active">
-                    <input type="text" id="custCode" placeholder="Application Code" required>
-                    <input type="tel" id="custPhone" placeholder="Phone (10 digits)" maxlength="10" required>
-                    <input type="text" id="custAddress" placeholder="Site Address" required>
-                    <button type="submit" class="btn">Login</button>
-                </form>
-                <form id="vendorForm" class="form">
-                    <input type="text" id="vendId" placeholder="Vendor ID" required>
-                    <input type="tel" id="vendPhone" placeholder="Phone (10 digits)" maxlength="10" required>
-                    <input type="password" id="vendCode" placeholder="Access Code" required>
-                    <button type="submit" class="btn">Login</button>
-                </form>
             </div>
         </div>
+        <div class="mobile-menu-items" id="mobileMenuItems">
+            <!-- Items populated by JS -->
+        </div>
+        <div style="margin-top: auto; padding: 20px; border-top: 1px solid var(--light);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                <span style="font-weight: 500;">Dark Mode</span>
+                <div class="theme-toggle" id="themeToggle" onclick="toggleTheme()"></div>
+            </div>
+            <button class="btn-primary" onclick="logout()" style="background: var(--danger);">Logout</button>
+        </div>
+    </div>
 
-        <!-- Customer Dashboard -->
-        <div id="customerDash" class="page">
-            <nav class="nav">
-                <div class="nav-brand">☀️ Bhaskar Solar</div>
-                <div class="nav-links">
-                    <button class="nav-link active" data-section="overview">Overview</button>
-                    <button class="nav-link" data-section="production">Production</button>
-                    <button class="nav-link" data-section="documents">Docs</button>
-                    <button class="nav-link" data-section="chat">Chat</button>
-                </div>
-                <div class="nav-user">
-                    <span id="custName">Customer</span>
-                    <button class="btn-sm btn-logout" onclick="logout()">Logout</button>
-                </div>
-            </nav>
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
 
-            <section id="overview" class="section active">
-                <h2>Welcome, <span id="custNameDisplay">Customer</span></h2>
-                <div class="code-display">
-                    <span>Application Code:</span>
-                    <strong id="appCode">BSV-2024-0001</strong>
-                    <span class="status">Under Review</span>
-                </div>
-                <div class="stats">
-                    <div class="stat"><div class="stat-val">6.5 kW</div><div class="stat-label">System Size</div></div>
-                    <div class="stat"><div class="stat-val">24</div><div class="stat-label">Panels</div></div>
-                    <div class="stat"><div class="stat-val">400W</div><div class="stat-label">Panel Rating</div></div>
-                </div>
-            </section>
+    <!-- Floating Action Button -->
+    <div class="fab" id="mainFab" onclick="toggleQuickActions()">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+    </div>
 
-            <section id="production" class="section">
+    <!-- Login Page -->
+    <div id="loginPage" class="page active">
+        <div class="login-container">
+            <div class="login-header">
+                <div class="logo">
+                    <svg viewBox="0 0 60 60" class="sun-icon">
+                        <circle cx="30" cy="30" r="18" fill="#FFD93D"/>
+                        <g stroke="#FFD93D" stroke-width="3">
+                            <line x1="30" y1="5" x2="30" y2="12"/>
+                            <line x1="30" y1="48" x2="30" y2="55"/>
+                            <line x1="5" y1="30" x2="12" y2="30"/>
+                            <line x1="48" y1="30" x2="55" y2="30"/>
+                            <line x1="12.7" y1="12.7" x2="17.5" y2="17.5"/>
+                            <line x1="42.5" y1="42.5" x2="47.3" y2="47.3"/>
+                            <line x1="12.7" y1="47.3" x2="17.5" y2="42.5"/>
+                            <line x1="42.5" y1="17.5" x2="47.3" y2="12.7"/>
+                        </g>
+                    </svg>
+                    <h1>Bhaskar Solar</h1>
+                    <p>Management Platform</p>
+                </div>
+            </div>
+
+            <div class="login-tabs">
+                <button class="tab-btn active" data-tab="customer">Customer</button>
+                <button class="tab-btn" data-tab="vendor">Vendor</button>
+            </div>
+
+            <!-- Customer Login -->
+            <form id="customerLogin" class="login-form active">
+                <div class="form-group">
+                    <label>Application Code</label>
+                    <input type="text" id="customerCode" placeholder="e.g., BSV-2024-0001" style="text-transform: uppercase;">
+                    <small style="color: var(--gray); font-size: 0.8rem;">Enter the code provided by your vendor</small>
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="tel" id="customerPhone" placeholder="Your 10-digit mobile number" maxlength="10">
+                </div>
+                <div class="form-group">
+                    <label>Site Address</label>
+                    <input type="text" id="customerAddress" placeholder="Your solar installation location">
+                </div>
+
+                <div style="background: rgba(244, 165, 35, 0.1); padding: 12px 15px; border-radius: var(--radius); margin-bottom: 15px;">
+                    <div style="display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--dark);">
+                        <svg viewBox="0 0 24 24" fill="var(--primary)" width="20" height="20"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                        <span>Your vendor will provide the application code after registering your project</span>
+                    </div>
+                </div>
+
+                <button type="button" class="btn-primary" onclick="doCustomerLogin()">Login as Customer</button>
+            </form>
+
+            <!-- Vendor Login -->
+            <form id="vendorLogin" class="login-form">
+                <div class="form-group">
+                    <label>Vendor ID</label>
+                    <input type="text" placeholder="Your vendor ID" id="vendorId">
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="tel" placeholder="10-digit mobile number" maxlength="10" id="vendorPhone">
+                </div>
+                <div class="form-group">
+                    <label>Password / Access Code</label>
+                    <input type="password" placeholder="Your secure access code" id="vendorCode">
+                </div>
+
+                <div style="background: rgba(46, 204, 113, 0.1); padding: 12px 15px; border-radius: var(--radius); margin-bottom: 15px;">
+                    <div style="display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--dark);">
+                        <svg viewBox="0 0 24 24" fill="#27AE60" width="20" height="20"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                        <span>As a vendor, you can generate and manage application codes for your customers</span>
+                    </div>
+                </div>
+
+                <button type="button" class="btn-primary" onclick="doVendorLogin()">Login as Vendor</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Customer Dashboard -->
+    <div id="customerDashboard" class="page">
+        <nav class="navbar">
+            <div class="hamburger-menu" id="hamburgerMenu" onclick="toggleMobileMenu()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <div class="nav-brand">
+                <svg viewBox="0 0 60 60" class="sun-icon small">
+                    <circle cx="30" cy="30" r="18" fill="#FFD93D"/>
+                    <g stroke="#FFD93D" stroke-width="3">
+                        <line x1="30" y1="5" x2="30" y2="12"/>
+                        <line x1="30" y1="48" x2="30" y2="55"/>
+                        <line x1="5" y1="30" x2="12" y2="30"/>
+                        <line x1="48" y1="30" x2="55" y2="30"/>
+                        <line x1="12.7" y1="12.7" x2="17.5" y2="17.5"/>
+                        <line x1="42.5" y1="42.5" x2="47.3" y2="47.3"/>
+                        <line x1="12.7" y1="47.3" x2="17.5" y2="42.5"/>
+                        <line x1="42.5" y1="17.5" x2="47.3" y2="12.7"/>
+                    </g>
+                </svg>
+                <span>Bhaskar Solar</span>
+            </div>
+            <div class="nav-links">
+                <button class="nav-btn active" data-section="overview">Overview</button>
+                <button class="nav-btn" data-section="production">Production</button>
+                <button class="nav-btn" data-section="documents">Doc Locker</button>
+                <button class="nav-btn" data-section="chat" style="position: relative;">
+                    Chat
+                    <span class="notification-badge" id="chatBadge" style="display: none;">3</span>
+                </button>
+                <button class="nav-btn" data-section="calc">Calculators</button>
+            </div>
+            <div class="nav-user">
+                <div class="theme-toggle" id="desktopThemeToggle" onclick="toggleTheme()" style="margin-right: 15px;"></div>
+                <span id="customerName">Alex Smith</span>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </nav>
+
+        <!-- Bottom Navigation for Mobile -->
+        <nav class="bottom-nav">
+            <div class="bottom-nav-items">
+                <button class="bottom-nav-item active" data-section="overview">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+                    <span>Overview</span>
+                </button>
+                <button class="bottom-nav-item" data-section="production">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2.05v2.02c3.95.49 7 3.85 7 7.93 0 3.21-1.92 6-4.72 7.28L13 17v5h5l-1.22-1.22C19.91 19.07 22 15.76 22 12c0-5.18-3.95-9.45-9-9.95zM11 2.05C5.94 2.55 2 6.81 2 12c0 3.76 2.09 7.07 5.22 8.78L6 22h5v-5l-2.28 2.28C6.08 18 4.5 15.21 4.5 12c0-4.08 3.05-7.44 7-7.93V2.05z"/></svg>
+                    <span>Production</span>
+                </button>
+                <button class="bottom-nav-item" data-section="documents">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                    <span>Docs</span>
+                </button>
+                <button class="bottom-nav-item" data-section="chat">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+                    <span>Chat</span>
+                </button>
+                <button class="bottom-nav-item" data-section="calc">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4 14h-2v-4H9v-2h4V7h2v4h4v2h-4v4z"/></svg>
+                    <span>Calc</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Customer Overview Section -->
+        <section id="overview" class="dashboard-section active">
+            <div class="section-header">
+                <h2>Customer Overview</h2>
+                <span class="badge"><span class="live-indicator"></span>Live</span>
+            </div>
+
+            <!-- Application Code Display -->
+            <div class="card full-width" style="margin-bottom: 20px; border-left: 4px solid var(--primary);">
+                <div class="card-body" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <div style="font-size: 0.85rem; color: var(--gray);">Your Application Code</div>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary); font-family: monospace;" id="customerAppCode">BSV-2024-0001</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.85rem; color: var(--gray);">Application Status</div>
+                        <span class="status pending" style="font-size: 0.9rem; padding: 6px 12px;">Under Review</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <button class="quick-action-btn" onclick="navigateToSection('customerDashboard', 'production', [])">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2.05v2.02c3.95.49 7 3.85 7 7.93 0 3.21-1.92 6-4.72 7.28L13 17v5h5l-1.22-1.22C19.91 19.07 22 15.76 22 12c0-5.18-3.95-9.45-9-9.95zM11 2.05C5.94 2.55 2 6.81 2 12c0 3.76 2.09 7.07 5.22 8.78L6 22h5v-5l-2.28 2.28C6.08 18 4.5 15.21 4.5 12c0-4.08 3.05-7.44 7-7.93V2.05z"/></svg>
+                    Production
+                </button>
+                <button class="quick-action-btn" onclick="navigateToSection('customerDashboard', 'documents', [])">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                    Documents
+                </button>
+                <button class="quick-action-btn" onclick="navigateToSection('customerDashboard', 'chat', [])">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+                    Chat
+                </button>
+                <button class="quick-action-btn" onclick="showModal('supportModal')">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                    Support
+                </button>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Contact Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Contact Information</h3>
+                        <span class="status verified">Verified</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-row">
+                            <span class="label">Name:</span>
+                            <span class="value">Alex Smith</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Email:</span>
+                            <span class="value">alex.smith@email.com</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Phone:</span>
+                            <span class="value">+1 (555) 123-4567</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Address:</span>
+                            <span class="value">123 Sunshine Avenue, Solar City, CA 90210</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vendor Status Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Application Details</h3>
+                        <span class="status verified">Registered</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-row">
+                            <span class="label">Application Code:</span>
+                            <span class="value" style="font-family: monospace; background: var(--light); padding: 4px 8px; border-radius: 4px;">BSV-2024-0001</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Vendor:</span>
+                            <span class="value">Complete Solar Solutions</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Application Date:</span>
+                            <span class="value">Jan 15, 2024</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Status:</span>
+                            <span class="status pending">Under Review</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Solar System Card -->
+                <div class="card full-width">
+                    <div class="card-header">
+                        <h3>Solar System Details</h3>
+                        <span class="badge info">Monocrystalline</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="system-stats">
+                            <div class="stat-box">
+                                <span class="stat-value">6.5 kW</span>
+                                <span class="stat-label">System Capacity</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-value">24</span>
+                                <span class="stat-label">Total Panels</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-value">400W</span>
+                                <span class="stat-label">Panel Rating</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-value">Oct 2026</span>
+                                <span class="stat-label">Est. Installation</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Production Section -->
+        <section id="production" class="dashboard-section">
+            <div class="section-header">
                 <h2>Production Monitoring</h2>
-                <div class="stats">
-                    <div class="stat highlight"><div class="stat-val">14.2</div><div class="stat-label">kWh Today</div></div>
-                    <div class="stat"><div class="stat-val">412.8</div><div class="stat-label">kWh This Month</div></div>
-                    <div class="stat"><div class="stat-val">87%</div><div class="stat-label">Efficiency</div></div>
-                </div>
-                <div class="chart" id="chart"></div>
-            </section>
+                <span class="badge success"><span class="live-indicator"></span>Live</span>
+            </div>
 
-            <section id="documents" class="section">
-                <h2>Documents</h2>
-                <div class="doc-list">
-                    <div class="doc-item"><span>📄 Solar Panel Warranty</span><button class="btn-sm">View</button></div>
-                    <div class="doc-item"><span>📄 Inverter Warranty</span><button class="btn-sm">View</button></div>
-                    <div class="doc-item"><span>📄 Installation Quotation</span><button class="btn-sm">View</button></div>
-                </div>
-            </section>
+            <!-- Search Bar -->
+            <div class="search-container">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                <input type="text" class="search-input" placeholder="Search production data..." id="productionSearch">
+            </div>
 
-            <section id="chat" class="section">
-                <h2>Chat with Support</h2>
-                <div class="chat-box" id="chatBox">
-                    <div class="msg received">Hello! How can we help you?</div>
+            <!-- Stats Showcase -->
+            <div class="stats-showcase">
+                <div class="stat-showcase-card">
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2.05v2.02c3.95.49 7 3.85 7 7.93 0 3.21-1.92 6-4.72 7.28L13 17v5h5l-1.22-1.22C19.91 19.07 22 15.76 22 12c0-5.18-3.95-9.45-9-9.95zM11 2.05C5.94 2.55 2 6.81 2 12c0 3.76 2.09 7.07 5.22 8.78L6 22h5v-5l-2.28 2.28C6.08 18 4.5 15.21 4.5 12c0-4.08 3.05-7.44 7-7.93V2.05z"/></svg>
+                    </div>
+                    <div class="stat-value-animated animated-counter" id="todayProduction">14.2</div>
+                    <div style="color: var(--gray); font-size: 0.9rem;">kWh Today</div>
+                    <span class="stat-trend up">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M7 14l5-5 5 5z"/></svg>
+                        +12%
+                    </span>
                 </div>
-                <div class="chat-input">
-                    <input type="text" id="msgInput" placeholder="Type a message...">
-                    <button class="btn" onclick="sendMessage()">Send</button>
+                <div class="stat-showcase-card">
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                    </div>
+                    <div class="stat-value-animated animated-counter" id="monthProduction">412.8</div>
+                    <div style="color: var(--gray); font-size: 0.9rem;">kWh This Month</div>
+                    <span class="stat-trend up">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M7 14l5-5 5 5z"/></svg>
+                        +8%
+                    </span>
                 </div>
-            </section>
+                <div class="stat-showcase-card">
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    </div>
+                    <div class="stat-value-animated animated-counter" id="efficiencyRate">87</div>
+                    <div style="color: var(--gray); font-size: 0.9rem;">% Efficiency</div>
+                    <span class="stat-trend down">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M7 10l5 5 5-5z"/></svg>
+                        -2%
+                    </span>
+                </div>
+                <div class="stat-showcase-card">
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                    </div>
+                    <div class="stat-value-animated animated-counter" id="co2Saved">1,224</div>
+                    <div style="color: var(--gray); font-size: 0.9rem;">kg CO₂ Saved</div>
+                    <span class="stat-trend up">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M7 14l5-5 5 5z"/></svg>
+                        +15%
+                    </span>
+                </div>
+            </div>
+
+            <!-- Enhanced Production Chart -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <div class="chart-title">Hourly Production</div>
+                    <div class="chart-period-selector">
+                        <button class="period-btn" onclick="setChartPeriod('day')">Day</button>
+                        <button class="period-btn active" onclick="setChartPeriod('week')">Week</button>
+                        <button class="period-btn" onclick="setChartPeriod('month')">Month</button>
+                    </div>
+                </div>
+                <div class="chart-area" id="productionChartArea">
+                    <!-- Chart bars populated by JS -->
+                </div>
+                <div class="chart-labels" id="chartLabels">
+                    <!-- Labels populated by JS -->
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Monthly Summary</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-row">
+                            <span class="label">This Month:</span>
+                            <span class="value">412.8 kWh</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Last Month:</span>
+                            <span class="value">387.5 kWh</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">YTD Generation:</span>
+                            <span class="value">2,456.2 kWh</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Environmental Impact</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="impact-stats">
+                            <div class="impact-item">
+                                <span class="impact-value">1,224</span>
+                                <span class="impact-unit">kg CO₂</span>
+                                <span class="impact-label">Saved</span>
+                            </div>
+                            <div class="impact-item">
+                                <span class="impact-value">512</span>
+                                <span class="impact-unit">trees</span>
+                                <span class="impact-label">Equivalent</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Documents Section -->
+        <section id="documents" class="dashboard-section">
+            <div class="section-header">
+                <h2>Doc Locker</h2>
+                <button class="btn-primary">Upload Document</button>
+            </div>
+
+            <div class="doc-tabs">
+                <button class="doc-tab active" data-doc-tab="warranty">Warranty</button>
+                <button class="doc-tab" data-doc-tab="quotation">Quotation & Financial</button>
+                <button class="doc-tab" data-doc-tab="utility">Utility & Billing</button>
+                <button class="doc-tab" data-doc-tab="contracts">Contracts</button>
+            </div>
+
+            <div class="doc-content">
+                <div id="warranty" class="doc-panel active">
+                    <div class="doc-list">
+                        <div class="doc-item">
+                            <div class="doc-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
+                            </div>
+                            <div class="doc-info">
+                                <span class="doc-name">Solar Panel Warranty</span>
+                                <span class="doc-meta">10 years coverage • PDF • 245 KB</span>
+                            </div>
+                            <button class="btn-sm">View</button>
+                        </div>
+                        <div class="doc-item">
+                            <div class="doc-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
+                            </div>
+                            <div class="doc-info">
+                                <span class="doc-name">Inverter Warranty Card</span>
+                                <span class="doc-meta">5 years coverage • PDF • 128 KB</span>
+                            </div>
+                            <button class="btn-sm">View</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="quotation" class="doc-panel">
+                    <div class="doc-list">
+                        <div class="doc-item">
+                            <div class="doc-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
+                            </div>
+                            <div class="doc-info">
+                                <span class="doc-name">Installation Quotation</span>
+                                <span class="doc-meta">Revised Aug 2026 • PDF • 312 KB</span>
+                            </div>
+                            <button class="btn-sm">View</button>
+                        </div>
+                        <div class="doc-item">
+                            <div class="doc-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
+                            </div>
+                            <div class="doc-info">
+                                <span class="doc-name">PM Surya Ghar Yojna Application</span>
+                                <span class="doc-meta">Government Scheme • PDF • 89 KB</span>
+                            </div>
+                            <button class="btn-sm">View</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="utility" class="doc-panel">
+                    <div class="doc-list">
+                        <div class="doc-item">
+                            <div class="doc-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
+                            </div>
+                            <div class="doc-info">
+                                <span class="doc-name">Electricity Bill - Aug 2026</span>
+                                <span class="doc-meta">Monthly Bill • PDF • 156 KB</span>
+                            </div>
+                            <button class="btn-sm">View</button>
+                        </div>
+                        <div class="doc-item">
+                            <div class="doc-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
+                            </div>
+                            <div class="doc-info">
+                                <span class="doc-name">Net Metering Application</span>
+                                <span class="doc-meta">Status: Pending Approval • PDF • 203 KB</span>
+                            </div>
+                            <button class="btn-sm">View</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="contracts" class="doc-panel">
+                    <div class="doc-list">
+                        <div class="doc-item">
+                            <div class="doc-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
+                            </div>
+                            <div class="doc-info">
+                                <span class="doc-name">Installation Contract</span>
+                                <span class="doc-meta">Signed Jun 2026 • PDF • 512 KB</span>
+                            </div>
+                            <button class="btn-sm">View</button>
+                        </div>
+                        <div class="doc-item">
+                            <div class="doc-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
+                            </div>
+                            <div class="doc-info">
+                                <span class="doc-name">Maintenance Agreement</span>
+                                <span class="doc-meta">2-year service • PDF • 298 KB</span>
+                            </div>
+                            <button class="btn-sm">View</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Chat Section -->
+        <section id="chat" class="dashboard-section">
+            <div class="section-header">
+                <h2>Vendor Communication</h2>
+                <span class="badge success"><span class="status-dot online"></span>Online</span>
+            </div>
+
+            <div class="chat-container">
+                <div class="chat-sidebar">
+                    <div class="chat-contact active">
+                        <div class="contact-avatar">CS</div>
+                        <div class="contact-info">
+                            <span class="contact-name">Complete Solar Solutions</span>
+                            <span class="contact-status"><span class="status-dot online"></span>Online</span>
+                        </div>
+                    </div>
+                    <div class="chat-contact">
+                        <div class="contact-avatar" style="background: var(--info);">SP</div>
+                        <div class="contact-info">
+                            <span class="contact-name">Support Team</span>
+                            <span class="contact-status" style="color: var(--gray);">Last seen 2h ago</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-main">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message received">
+                            <span class="message-sender">Vendor Support</span>
+                            <p>Hello! I'm reviewing your solar installation application. Everything looks great so far!</p>
+                            <span class="message-time">Today, 9:15 AM</span>
+                        </div>
+                        <div class="message sent">
+                            <p>Thank you for the update. What are the next steps?</p>
+                            <span class="message-time">Today, 9:20 AM</span>
+                        </div>
+                        <div class="message received">
+                            <span class="message-sender">Vendor Support</span>
+                            <p>We'll schedule a site inspection for tomorrow at 10:00 AM. Please ensure access to your electrical panel.</p>
+                            <span class="message-time">Today, 9:25 AM</span>
+                        </div>
+                        <div class="message sent">
+                            <p>Perfect, I'll make sure someone is available. Should I prepare any documents?</p>
+                            <span class="message-time">Today, 9:28 AM</span>
+                        </div>
+                        <div class="message received">
+                            <span class="message-sender">Vendor Support</span>
+                            <p>Yes, please have your recent electricity bills and any homeowner association approvals ready. See you tomorrow!</p>
+                            <span class="message-time">Today, 9:30 AM</span>
+                        </div>
+                    </div>
+                    <div class="chat-input">
+                        <input type="text" placeholder="Type your message..." id="chatInputField">
+                        <button class="btn-send" onclick="sendChatMessage()">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Calculators Section -->
+        <section id="calc" class="dashboard-section">
+            <div class="section-header">
+                <h2>Solar Calculators</h2>
+            </div>
+
+            <div class="calc-grid">
+                <div class="calc-card">
+                    <div class="calc-icon">⚡</div>
+                    <h3>Energy Calculator</h3>
+                    <p>Calculate daily energy production based on system size and sunlight hours</p>
+                    <div class="calc-inputs">
+                        <input type="number" placeholder="System Size (kW)" id="energySysSize" step="0.1">
+                        <input type="number" placeholder="Sunlight Hours (avg 4-6)" id="sunHours" step="0.5" value="5">
+                        <button class="btn-primary" onclick="calculateEnergy()">Calculate</button>
+                    </div>
+                    <div class="calc-result" id="energyResult"></div>
+                </div>
+
+                <div class="calc-card">
+                    <div class="calc-icon">💰</div>
+                    <h3>Savings Estimator</h3>
+                    <p>Estimate your monthly electricity savings with solar</p>
+                    <div class="calc-inputs">
+                        <input type="number" placeholder="Monthly Bill (₹)" id="monthlyBill" step="100">
+                        <input type="number" placeholder="Electricity Rate (₹/kWh)" id="elecRate" step="0.5" value="6">
+                        <button class="btn-primary" onclick="calculateSavings()">Calculate</button>
+                    </div>
+                    <div class="calc-result" id="savingsResult"></div>
+                </div>
+
+                <div class="calc-card">
+                    <div class="calc-icon">🔄</div>
+                    <h3>Watt Calculator</h3>
+                    <p>Convert between energy units (W, kW, MW)</p>
+                    <div class="calc-inputs">
+                        <input type="number" placeholder="Watts" id="watts">
+                        <button class="btn-primary" onclick="convertWatts()">Convert</button>
+                    </div>
+                    <div class="calc-result" id="wattsResult"></div>
+                </div>
+
+                <div class="calc-card">
+                    <div class="calc-icon">🔋</div>
+                    <h3>Battery Sizing</h3>
+                    <p>Calculate battery capacity needed for backup</p>
+                    <div class="calc-inputs">
+                        <input type="number" placeholder="Daily Usage (kWh)" id="dailyUsage" step="0.1">
+                        <input type="number" placeholder="Backup Days" id="backupDays" value="1" min="1">
+                        <button class="btn-primary" onclick="calculateBattery()">Calculate</button>
+                    </div>
+                    <div class="calc-result" id="batteryResult"></div>
+                </div>
+
+                <div class="calc-card">
+                    <div class="calc-icon">📐</div>
+                    <h3>Roof Area Calculator</h3>
+                    <p>Estimate roof area needed for solar panels</p>
+                    <div class="calc-inputs">
+                        <input type="number" placeholder="System Size (kW)" id="roofSysSize" step="0.1">
+                        <select id="panelType" style="padding: 12px 15px; border: 2px solid var(--light); border-radius: var(--radius); font-size: 1rem; width: 100%;">
+                            <option value="mono">Monocrystalline</option>
+                            <option value="poly">Polycrystalline</option>
+                            <option value="thin">Thin-Film</option>
+                        </select>
+                        <button class="btn-primary" onclick="calculateRoofArea()">Calculate</button>
+                    </div>
+                    <div class="calc-result" id="roofResult"></div>
+                </div>
+
+                <div class="calc-card">
+                    <div class="calc-icon">🌡️</div>
+                    <h3>Temperature Derating</h3>
+                    <p>Calculate panel efficiency loss due to temperature</p>
+                    <div class="calc-inputs">
+                        <input type="number" placeholder="Panel Rating (W)" id="panelRating" step="10" value="400">
+                        <input type="number" placeholder="Ambient Temp (°C)" id="ambientTemp" value="35">
+                        <button class="btn-primary" onclick="calculateTempDerate()">Calculate</button>
+                    </div>
+                    <div class="calc-result" id="tempResult"></div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Vendor Dashboard -->
+    <div id="vendorDashboard" class="page">
+        <nav class="navbar vendor-nav">
+            <div class="hamburger-menu" id="vendorHamburgerMenu" onclick="toggleMobileMenu()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <div class="nav-brand">
+                <svg viewBox="0 0 60 60" class="sun-icon small">
+                    <circle cx="30" cy="30" r="18" fill="#FFD93D"/>
+                    <g stroke="#FFD93D" stroke-width="3">
+                        <line x1="30" y1="5" x2="30" y2="12"/>
+                        <line x1="30" y1="48" x2="30" y2="55"/>
+                        <line x1="5" y1="30" x2="12" y2="30"/>
+                        <line x1="48" y1="30" x2="55" y2="30"/>
+                        <line x1="12.7" y1="12.7" x2="17.5" y2="17.5"/>
+                        <line x1="42.5" y1="42.5" x2="47.3" y2="47.3"/>
+                        <line x1="12.7" y1="47.3" x2="17.5" y2="42.5"/>
+                        <line x1="42.5" y1="17.5" x2="47.3" y2="12.7"/>
+                    </g>
+                </svg>
+                <span>Bhaskar Solar</span>
+            </div>
+            <div class="nav-links">
+                <button class="nav-btn active" data-section="vendorOverview">Dashboard</button>
+                <button class="nav-btn" data-section="customers">Customers</button>
+                <button class="nav-btn" data-section="projects">Projects</button>
+                <button class="nav-btn" data-section="tools">Tools</button>
+                <button class="nav-btn" data-section="resources">Resources</button>
+            </div>
+            <div class="nav-user">
+                <div class="theme-toggle dark" id="vendorThemeToggle" onclick="toggleTheme()" style="margin-right: 15px;"></div>
+                <span id="vendorName">Complete Solar Solutions</span>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </nav>
+
+        <!-- Bottom Navigation for Mobile -->
+        <nav class="bottom-nav">
+            <div class="bottom-nav-items">
+                <button class="bottom-nav-item active" data-section="vendorOverview">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+                    <span>Dashboard</span>
+                </button>
+                <button class="bottom-nav-item" data-section="customers">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                    <span>Customers</span>
+                </button>
+                <button class="bottom-nav-item" data-section="projects">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                    <span>Projects</span>
+                </button>
+                <button class="bottom-nav-item" data-section="tools">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>
+                    <span>Tools</span>
+                </button>
+                <button class="bottom-nav-item" data-section="resources">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                    <span>Resources</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Vendor Overview -->
+        <section id="vendorOverview" class="dashboard-section active">
+            <div class="section-header">
+                <h2>Complete Solar Solutions</h2>
+                <span class="badge verified">Verified Vendor</span>
+            </div>
+
+            <!-- Vendor Stats Showcase -->
+            <div class="stats-showcase">
+                <div class="stat-showcase-card">
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                    </div>
+                    <div class="stat-value-animated animated-counter">48</div>
+                    <div style="color: var(--gray); font-size: 0.9rem;">Active Customers</div>
+                    <span class="stat-trend up">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M7 14l5-5 5 5z"/></svg>
+                        +5 this month
+                    </span>
+                </div>
+                <div class="stat-showcase-card">
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                    </div>
+                    <div class="stat-value-animated animated-counter">12</div>
+                    <div style="color: var(--gray); font-size: 0.9rem;">Projects In Progress</div>
+                    <span class="stat-trend neutral">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M8 12h8v2H8z"/></svg>
+                        On track
+                    </span>
+                </div>
+                <div class="stat-showcase-card">
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                    </div>
+                    <div class="stat-value-animated animated-counter">156</div>
+                    <div style="color: var(--gray); font-size: 0.9rem;">Total Installations</div>
+                    <span class="stat-trend up">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M7 14l5-5 5 5z"/></svg>
+                        +12 this year
+                    </span>
+                </div>
+                <div class="stat-showcase-card">
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
+                    </div>
+                    <div class="stat-value-animated animated-counter">98</div>
+                    <div style="color: var(--gray); font-size: 0.9rem;">% Satisfaction</div>
+                    <span class="stat-trend up">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M7 14l5-5 5 5z"/></svg>
+                        +2%
+                    </span>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Business Information</h3>
+                        <button class="btn-sm" onclick="showModal('editBusinessModal')">Edit</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-row">
+                            <span class="label">Vendor Code:</span>
+                            <span class="value">SV-2023-001</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Address:</span>
+                            <span class="value">456 Solar Park Blvd, Tech City, TC 94000</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Phone:</span>
+                            <span class="value">+1 (555) 987-6543</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Email:</span>
+                            <span class="value">info@completesolar.com</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Business Hours</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-row">
+                            <span class="label">Mon - Fri:</span>
+                            <span class="value">9:00 AM - 6:00 PM</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Saturday:</span>
+                            <span class="value">10:00 AM - 4:00 PM</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Sunday:</span>
+                            <span class="value">Closed</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Comparison -->
+                <div class="card full-width">
+                    <div class="card-header">
+                        <h3>Monthly Performance</h3>
+                        <button class="btn-sm" onclick="exportReport()">Export Report</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="comparison-bars">
+                            <div class="comparison-bar-item">
+                                <span class="comparison-bar-label">Jan</span>
+                                <div class="comparison-bar-track">
+                                    <div class="comparison-bar-fill current" style="width: 85%;">85%</div>
+                                </div>
+                            </div>
+                            <div class="comparison-bar-item">
+                                <span class="comparison-bar-label">Feb</span>
+                                <div class="comparison-bar-track">
+                                    <div class="comparison-bar-fill current" style="width: 92%;">92%</div>
+                                </div>
+                            </div>
+                            <div class="comparison-bar-item">
+                                <span class="comparison-bar-label">Mar</span>
+                                <div class="comparison-bar-track">
+                                    <div class="comparison-bar-fill current" style="width: 78%;">78%</div>
+                                </div>
+                            </div>
+                            <div class="comparison-bar-item">
+                                <span class="comparison-bar-label">Apr</span>
+                                <div class="comparison-bar-track">
+                                    <div class="comparison-bar-fill current" style="width: 95%;">95%</div>
+                                </div>
+                            </div>
+                            <div class="comparison-bar-item">
+                                <span class="comparison-bar-label">May</span>
+                                <div class="comparison-bar-track">
+                                    <div class="comparison-bar-fill current" style="width: 88%;">88%</div>
+                                </div>
+                            </div>
+                            <div class="comparison-bar-item">
+                                <span class="comparison-bar-label">Jun</span>
+                                <div class="comparison-bar-track">
+                                    <div class="comparison-bar-fill current" style="width: 91%;">91%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Customers Section -->
+        <section id="customers" class="dashboard-section">
+            <div class="section-header">
+                <h2>Customer Management</h2>
+                <button class="btn-primary" onclick="showModal('newCustomerModal')">+ New Customer</button>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="search-container">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                <input type="text" class="search-input" placeholder="Search customers by name, ID, or code..." id="customerSearch" oninput="filterCustomers()">
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="quick-actions" style="display: flex;">
+                <div class="quick-action-btn" style="cursor: default; background: rgba(39, 174, 96, 0.1); color: #27AE60;">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                    48 Active
+                </div>
+                <div class="quick-action-btn" style="cursor: default; background: rgba(243, 156, 18, 0.1); color: #F39C12;">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    12 Pending
+                </div>
+                <div class="quick-action-btn" style="cursor: default; background: rgba(52, 152, 219, 0.1); color: #3498DB;">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                    156 Total
+                </div>
+                <div class="quick-action-btn" onclick="showModal('generateCodeModal')" style="background: var(--primary); color: white;">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                    Generate Code
+                </div>
+            </div>
+
+            <!-- Application Codes Section -->
+            <div class="card full-width" style="margin-bottom: 20px;">
+                <div class="card-header">
+                    <h3>📋 Application Codes</h3>
+                    <button class="btn-sm" onclick="showModal('codesListModal')">View All Codes</button>
+                </div>
+                <div class="card-body">
+                    <p style="color: var(--gray); margin-bottom: 15px; font-size: 0.9rem;">
+                        Generate unique application codes for your customers. They will use this code to login and track their solar installation.
+                    </p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div style="text-align: center; padding: 15px; background: var(--light); border-radius: var(--radius);">
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--primary);">24</div>
+                            <div style="font-size: 0.8rem; color: var(--gray);">Active Codes</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: var(--light); border-radius: var(--radius);">
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--warning);">8</div>
+                            <div style="font-size: 0.8rem; color: var(--gray);">Pending Use</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: var(--light); border-radius: var(--radius);">
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--success);">16</div>
+                            <div style="font-size: 0.8rem; color: var(--gray);">Used</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="customer-table-container">
+                <table class="data-table" id="customersTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Application Code</th>
+                            <th>Phone</th>
+                            <th>Status</th>
+                            <th>System Size</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>#24578</td>
+                            <td>Alex Smith</td>
+                            <td><code style="background: var(--light); padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">BSV-2024-0001</code></td>
+                            <td>+91 98765 43210</td>
+                            <td><span class="status pending">Under Review</span></td>
+                            <td>6.5 kW</td>
+                            <td>
+                                <button class="btn-sm" onclick="viewCustomer('24578')">View</button>
+                                <button class="btn-sm" onclick="resendCode('BSV-2024-0001')" style="background: var(--info); margin-left: 5px;">Resend Code</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>#24579</td>
+                            <td>Sarah Johnson</td>
+                            <td><code style="background: var(--light); padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">BSV-2024-0002</code></td>
+                            <td>+91 87654 32109</td>
+                            <td><span class="status verified">Approved</span></td>
+                            <td>8.0 kW</td>
+                            <td>
+                                <button class="btn-sm" onclick="viewCustomer('24579')">View</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>#24580</td>
+                            <td>Mike Williams</td>
+                            <td><code style="background: var(--light); padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">BSV-2024-0003</code></td>
+                            <td>+91 76543 21098</td>
+                            <td><span class="status success">Installed</span></td>
+                            <td>10.0 kW</td>
+                            <td>
+                                <button class="btn-sm" onclick="viewCustomer('24580')">View</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>#24581</td>
+                            <td>Emily Davis</td>
+                            <td><code style="background: var(--light); padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">BSV-2024-0004</code></td>
+                            <td>+91 65432 10987</td>
+                            <td><span class="status pending">Pending Review</span></td>
+                            <td>5.5 kW</td>
+                            <td>
+                                <button class="btn-sm" onclick="viewCustomer('24581')">View</button>
+                                <button class="btn-sm" onclick="resendCode('BSV-2024-0004')" style="background: var(--info); margin-left: 5px;">Resend Code</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>#24582</td>
+                            <td>Robert Chen</td>
+                            <td><code style="background: var(--light); padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">BSV-2024-0005</code></td>
+                            <td>+91 54321 09876</td>
+                            <td><span class="status success">Installed</span></td>
+                            <td>7.5 kW</td>
+                            <td>
+                                <button class="btn-sm" onclick="viewCustomer('24582')">View</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>-</td>
+                            <td style="color: var(--gray);">Unassigned</td>
+                            <td><code style="background: var(--warning); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">BSV-2024-0006</code></td>
+                            <td>-</td>
+                            <td><span class="status pending" style="background: #FFF3E0;">Code Generated</span></td>
+                            <td>-</td>
+                            <td>
+                                <button class="btn-sm" onclick="shareCode('BSV-2024-0006')" style="background: var(--success);">Share</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Projects Section -->
+        <section id="projects" class="dashboard-section">
+            <div class="section-header">
+                <h2>Project Management</h2>
+                <button class="btn-primary" onclick="showModal('newProjectModal')">+ New Project</button>
+            </div>
+
+            <div class="project-cards">
+                <div class="project-card">
+                    <div class="project-header">
+                        <h4>Smith Residence</h4>
+                        <span class="status pending">Site Survey</span>
+                    </div>
+                    <div class="project-details">
+                        <p><strong>Customer:</strong> Alex Smith</p>
+                        <p><strong>System:</strong> 6.5 kW Monocrystalline</p>
+                        <p><strong>Timeline:</strong> Oct 2026</p>
+                        <p><strong>Progress:</strong> 25%</p>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 25%"></div>
+                    </div>
+                </div>
+
+                <div class="project-card">
+                    <div class="project-header">
+                        <h4>Johnson Residence</h4>
+                        <span class="status verified">Installation</span>
+                    </div>
+                    <div class="project-details">
+                        <p><strong>Customer:</strong> Sarah Johnson</p>
+                        <p><strong>System:</strong> 8.0 kW Monocrystalline</p>
+                        <p><strong>Timeline:</strong> Sep 2026</p>
+                        <p><strong>Progress:</strong> 60%</p>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 60%"></div>
+                    </div>
+                </div>
+
+                <div class="project-card">
+                    <div class="project-header">
+                        <h4>Williams Residence</h4>
+                        <span class="status success">Completed</span>
+                    </div>
+                    <div class="project-details">
+                        <p><strong>Customer:</strong> Mike Williams</p>
+                        <p><strong>System:</strong> 10.0 kW Monocrystalline</p>
+                        <p><strong>Timeline:</strong> Aug 2026</p>
+                        <p><strong>Progress:</strong> 100%</p>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tools Section -->
+        <section id="tools" class="dashboard-section">
+            <div class="section-header">
+                <h2>Premium Business Tools</h2>
+                <span class="badge info">Pro Access</span>
+            </div>
+
+            <div class="tools-grid">
+                <div class="tool-card premium" onclick="showModal('quotationModal')">
+                    <div class="tool-badge">Premium</div>
+                    <div class="tool-icon">📋</div>
+                    <h3>Quotation Builder</h3>
+                    <p>Create detailed, itemized installation quotes with financing options</p>
+                    <button class="btn-primary">Launch Tool</button>
+                </div>
+
+                <div class="tool-card premium" onclick="showModal('digitalLockerModal')">
+                    <div class="tool-badge">Premium</div>
+                    <div class="tool-icon">🔒</div>
+                    <h3>Digital Locker</h3>
+                    <p>Secure storage for customer details, licenses, and project files</p>
+                    <button class="btn-primary">Launch Tool</button>
+                </div>
+
+                <div class="tool-card premium" onclick="showModal('projectManagerModal')">
+                    <div class="tool-badge">Premium</div>
+                    <div class="tool-icon">📊</div>
+                    <h3>Project Manager</h3>
+                    <p>Track multiple installations with integrated timelines</p>
+                    <button class="btn-primary">Launch Tool</button>
+                </div>
+
+                <div class="tool-card premium">
+                    <div class="tool-badge">Premium</div>
+                    <div class="tool-icon">📈</div>
+                    <h3>Analytics Dashboard</h3>
+                    <p>Business insights, revenue tracking, and performance metrics</p>
+                    <button class="btn-primary" onclick="showModal('analyticsModal')">Launch Tool</button>
+                </div>
+
+                <div class="tools-divider">
+                    <span>Basic Field Tools</span>
+                </div>
+
+                <div class="tool-card basic" onclick="showModal('calculatorModal')">
+                    <div class="tool-icon">🧮</div>
+                    <h3>Solar Calculator</h3>
+                    <p>Calculate system size, savings, and ROI</p>
+                    <button class="btn-secondary">Open</button>
+                </div>
+
+                <div class="tool-card basic" onclick="showModal('compassModal')">
+                    <div class="tool-icon">🧭</div>
+                    <h3>Compass</h3>
+                    <p>Determine optimal solar panel orientation</p>
+                    <button class="btn-secondary">Open</button>
+                </div>
+
+                <div class="tool-card basic" onclick="showModal('angleModal')">
+                    <div class="tool-icon">📐</div>
+                    <h3>Angle Tool</h3>
+                    <p>Calculate roof pitch and optimal tilt angle</p>
+                    <button class="btn-secondary">Open</button>
+                </div>
+
+                <div class="tool-card basic" onclick="showModal('shadowModal')">
+                    <div class="tool-icon">🌤️</div>
+                    <h3>Shadow Analysis</h3>
+                    <p>Analyze shading impacts on solar potential</p>
+                    <button class="btn-secondary">Open</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Resources Section -->
+        <section id="resources" class="dashboard-section">
+            <div class="section-header">
+                <h2>Technical Resources</h2>
+            </div>
+
+            <div class="resources-grid">
+                <div class="resource-card">
+                    <h3>Solar Panel Types</h3>
+                    <div class="resource-content">
+                        <div class="resource-item">
+                            <h4>Monocrystalline</h4>
+                            <p>Highest efficiency (15-20%) but at a higher cost. Best for limited roof space.</p>
+                        </div>
+                        <div class="resource-item">
+                            <h4>Polycrystalline</h4>
+                            <p>Mid-range efficiency (13-16%) and cost. Good balance of price and performance.</p>
+                        </div>
+                        <div class="resource-item">
+                            <h4>Thin-Film</h4>
+                            <p>Lowest efficiency (10-13%) but lightweight and flexible. Best for large commercial installations.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="resource-card">
+                    <h3>Benefits of Solar</h3>
+                    <div class="resource-content">
+                        <ul class="benefits-list">
+                            <li>Reduce electricity bills by 50-90%</li>
+                            <li>Increase property value by 3-4%</li>
+                            <li>Protection against rising utility rates</li>
+                            <li>Government tax credits available</li>
+                            <li>Environmental sustainability</li>
+                            <li>Energy independence</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modals -->
+    <!-- Support Modal -->
+    <div id="supportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Support Center</h3>
+                <button class="modal-close" onclick="closeModal('supportModal')">&times;</button>
+            </div>
+            <form class="modal-form" onsubmit="submitSupport(event)">
+                <div class="form-group">
+                    <label>Issue Type</label>
+                    <select id="supportType" required style="padding: 12px 15px; border: 2px solid var(--light); border-radius: var(--radius); font-size: 1rem; width: 100%;">
+                        <option value="">Select issue type...</option>
+                        <option value="technical">Technical Issue</option>
+                        <option value="billing">Billing Inquiry</option>
+                        <option value="installation">Installation Query</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select id="supportPriority" required style="padding: 12px 15px; border: 2px solid var(--light); border-radius: var(--radius); font-size: 1rem; width: 100%;">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="supportDescription" placeholder="Describe your issue in detail..." required style="padding: 12px 15px; border: 2px solid var(--light); border-radius: var(--radius); font-size: 1rem; width: 100%; min-height: 100px; resize: vertical;"></textarea>
+                </div>
+                <button type="submit" class="btn-primary">Submit Request</button>
+            </form>
         </div>
+    </div>
 
-        <!-- Vendor Dashboard -->
-        <div id="vendorDash" class="page">
-            <nav class="nav">
-                <div class="nav-brand">☀️ Bhaskar Solar</div>
-                <div class="nav-links">
-                    <button class="nav-link active" data-section="vOverview">Dashboard</button>
-                    <button class="nav-link" data-section="vCustomers">Customers</button>
-                    <button class="nav-link" data-section="vTools">Tools</button>
+    <div id="newCustomerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Register New Customer</h3>
+                <button class="modal-close" onclick="closeModal('newCustomerModal')">&times;</button>
+            </div>
+            <form class="modal-form">
+                <div class="form-group">
+                    <label>Customer Name</label>
+                    <input type="text" placeholder="Full name" required>
                 </div>
-                <div class="nav-user">
-                    <span id="vendName">Vendor</span>
-                    <button class="btn-sm btn-logout" onclick="logout()">Logout</button>
+                <div class="form-group">
+                    <label>Site Address</label>
+                    <input type="text" placeholder="Installation address" required>
                 </div>
-            </nav>
-
-            <section id="vOverview" class="section active">
-                <h2>Vendor Dashboard</h2>
-                <div class="stats">
-                    <div class="stat"><div class="stat-val">48</div><div class="stat-label">Customers</div></div>
-                    <div class="stat"><div class="stat-val">12</div><div class="stat-label">Projects</div></div>
-                    <div class="stat"><div class="stat-val">156</div><div class="stat-label">Installations</div></div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="tel" placeholder="10-digit mobile" maxlength="10" required>
                 </div>
-                <button class="btn" onclick="showCodeGen()">Generate New Code</button>
-            </section>
-
-            <section id="vCustomers" class="section">
-                <h2>Customer Codes</h2>
-                <div class="code-list" id="codeList"></div>
-            </section>
-
-            <section id="vTools" class="section">
-                <h2>Calculators</h2>
-                <div class="calc">
-                    <h3>System Size Calculator</h3>
-                    <input type="number" id="monthlyBill" placeholder="Monthly Bill (₹)">
-                    <button class="btn" onclick="calcSystem()">Calculate</button>
-                    <div id="calcResult" class="result"></div>
+                <div class="form-group">
+                    <label>Vendor License Number</label>
+                    <input type="text" placeholder="License ID" required>
                 </div>
-                <div class="calc">
-                    <h3>ROI Calculator</h3>
-                    <input type="number" id="sysCost" placeholder="System Cost (₹)">
-                    <input type="number" id="annSavings" placeholder="Annual Savings (₹)">
-                    <button class="btn" onclick="calcROI()">Calculate</button>
-                    <div id="roiResult" class="result"></div>
-                </div>
-            </section>
+                <button type="submit" class="btn-primary">Register Customer</button>
+            </form>
         </div>
+    </div>
 
-        <!-- Code Generation Modal -->
-        <div id="codeModal" class="modal">
-            <div class="modal-box">
-                <h3>Generate Application Code</h3>
-                <input type="text" id="newCustName" placeholder="Customer Name">
-                <input type="tel" id="newCustPhone" placeholder="Phone" maxlength="10">
-                <button class="btn" onclick="genCode()">Generate</button>
-                <div id="genCodeDisplay" class="code-result"></div>
-                <button class="btn-sm" onclick="closeModal()">Close</button>
+    <div id="newProjectModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Project</h3>
+                <button class="modal-close" onclick="closeModal('newProjectModal')">&times;</button>
+            </div>
+            <form class="modal-form">
+                <div class="form-group">
+                    <label>Select Customer</label>
+                    <select required>
+                        <option value="">Choose customer...</option>
+                        <option value="24578">Alex Smith</option>
+                        <option value="24579">Sarah Johnson</option>
+                        <option value="24580">Mike Williams</option>
+                        <option value="24581">Emily Davis</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>System Type</label>
+                    <select required>
+                        <option value="">Select type...</option>
+                        <option value="mono">Monocrystalline</option>
+                        <option value="poly">Polycrystalline</option>
+                        <option value="thin">Thin-Film</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>System Size (kW)</label>
+                    <input type="number" placeholder="e.g., 6.5" required>
+                </div>
+                <div class="form-group">
+                    <label>Estimated Installation Date</label>
+                    <input type="date" required>
+                </div>
+                <button type="submit" class="btn-primary">Create Project</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quotation Builder Modal -->
+    <div id="quotationModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>Quotation Builder</h3>
+                <button class="modal-close" onclick="closeModal('quotationModal')">&times;</button>
+            </div>
+            <form class="modal-form" onsubmit="generateQuotation(event)">
+                <div class="form-group">
+                    <label>Customer Name</label>
+                    <input type="text" placeholder="Select or enter customer name" required>
+                </div>
+                <div class="form-group">
+                    <label>System Size (kW)</label>
+                    <input type="number" placeholder="e.g., 6.5" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label>Panel Type</label>
+                    <select required style="padding: 12px 15px; border: 2px solid var(--light); border-radius: var(--radius); font-size: 1rem; width: 100%;">
+                        <option value="">Select type...</option>
+                        <option value="mono">Monocrystalline (Premium)</option>
+                        <option value="poly">Polycrystalline (Standard)</option>
+                        <option value="bifacial">Bifacial (High Efficiency)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Inverter Type</label>
+                    <select required style="padding: 12px 15px; border: 2px solid var(--light); border-radius: var(--radius); font-size: 1rem; width: 100%;">
+                        <option value="">Select type...</option>
+                        <option value="string">String Inverter</option>
+                        <option value="micro">Microinverters</option>
+                        <option value="hybrid">Hybrid Inverter</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Installation Type</label>
+                    <select required style="padding: 12px 15px; border: 2px solid var(--light); border-radius: var(--radius); font-size: 1rem; width: 100%;">
+                        <option value="rooftop">Rooftop</option>
+                        <option value="ground">Ground Mount</option>
+                        <option value="carport">Solar Carport</option>
+                    </select>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Equipment Cost (₹)</label>
+                        <input type="number" placeholder="0.00" id="equipmentCost">
+                    </div>
+                    <div class="form-group">
+                        <label>Installation Cost (₹)</label>
+                        <input type="number" placeholder="0.00" id="installationCost">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">Generate Quotation</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Calculator Modal -->
+    <div id="calculatorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Solar Calculator</h3>
+                <button class="modal-close" onclick="closeModal('calculatorModal')">&times;</button>
+            </div>
+            <div class="modal-form">
+                <div class="calc-grid" style="margin-top: 0;">
+                    <div class="calc-card">
+                        <div class="calc-icon">⚡</div>
+                        <h3>System Sizer</h3>
+                        <div class="calc-inputs">
+                            <input type="number" placeholder="Monthly Bill (₹)" id="vendorMonthlyBill">
+                            <button class="btn-primary" onclick="calculateSystemSize()">Calculate</button>
+                        </div>
+                        <div class="calc-result" id="systemSizeResult"></div>
+                    </div>
+                    <div class="calc-card">
+                        <div class="calc-icon">💰</div>
+                        <h3>ROI Calculator</h3>
+                        <div class="calc-inputs">
+                            <input type="number" placeholder="System Cost (₹)" id="systemCost">
+                            <input type="number" placeholder="Annual Savings (₹)" id="annualSavings">
+                            <button class="btn-primary" onclick="calculateROI()">Calculate</button>
+                        </div>
+                        <div class="calc-result" id="roiResult"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <div id="toast"></div>
+    <!-- Analytics Modal -->
+    <div id="analyticsModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>Analytics Dashboard</h3>
+                <button class="modal-close" onclick="closeModal('analyticsModal')">&times;</button>
+            </div>
+            <div class="modal-form">
+                <div class="stats-showcase" style="margin-bottom: 20px;">
+                    <div class="stat-showcase-card">
+                        <div class="stat-value-animated">₹12.5L</div>
+                        <div style="color: var(--gray); font-size: 0.85rem;">Revenue This Month</div>
+                        <span class="stat-trend up">+18%</span>
+                    </div>
+                    <div class="stat-showcase-card">
+                        <div class="stat-value-animated">24</div>
+                        <div style="color: var(--gray); font-size: 0.85rem;">Projects Completed</div>
+                        <span class="stat-trend up">+6</span>
+                    </div>
+                    <div class="stat-showcase-card">
+                        <div class="stat-value-animated">8.2kW</div>
+                        <div style="color: var(--gray); font-size: 0.85rem;">Avg. System Size</div>
+                        <span class="stat-trend neutral">Stable</span>
+                    </div>
+                </div>
+                <div class="comparison-card">
+                    <div class="comparison-header">
+                        <h4>Monthly Revenue Trend</h4>
+                    </div>
+                    <div class="comparison-bars">
+                        <div class="comparison-bar-item">
+                            <span class="comparison-bar-label">Jan</span>
+                            <div class="comparison-bar-track">
+                                <div class="comparison-bar-fill current" style="width: 65%;">₹8.2L</div>
+                            </div>
+                        </div>
+                        <div class="comparison-bar-item">
+                            <span class="comparison-bar-label">Feb</span>
+                            <div class="comparison-bar-track">
+                                <div class="comparison-bar-fill current" style="width: 78%;">₹9.8L</div>
+                            </div>
+                        </div>
+                        <div class="comparison-bar-item">
+                            <span class="comparison-bar-label">Mar</span>
+                            <div class="comparison-bar-track">
+                                <div class="comparison-bar-fill current" style="width: 72%;">₹9.1L</div>
+                            </div>
+                        </div>
+                        <div class="comparison-bar-item">
+                            <span class="comparison-bar-label">Apr</span>
+                            <div class="comparison-bar-track">
+                                <div class="comparison-bar-fill current" style="width: 88%;">₹11.2L</div>
+                            </div>
+                        </div>
+                        <div class="comparison-bar-item">
+                            <span class="comparison-bar-label">May</span>
+                            <div class="comparison-bar-track">
+                                <div class="comparison-bar-fill current" style="width: 95%;">₹12.5L</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generate Application Code Modal -->
+    <div id="generateCodeModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>🎫 Generate Application Code</h3>
+                <button class="modal-close" onclick="closeModal('generateCodeModal')">&times;</button>
+            </div>
+            <form class="modal-form" onsubmit="generateApplicationCode(event)">
+                <div class="form-group">
+                    <label>Customer Name (Optional)</label>
+                    <input type="text" placeholder="Enter customer name" id="codeCustomerName">
+                </div>
+                <div class="form-group">
+                    <label>Customer Phone</label>
+                    <input type="tel" placeholder="10-digit mobile number" maxlength="10" id="codeCustomerPhone" pattern="[0-9]{10}">
+                </div>
+                <div class="form-group">
+                    <label>Site Address</label>
+                    <input type="text" placeholder="Installation address" id="codeSiteAddress">
+                </div>
+                <div class="form-group">
+                    <label>Project Type</label>
+                    <select id="codeProjectType" style="padding: 12px 15px; border: 2px solid var(--light); border-radius: var(--radius); font-size: 1rem; width: 100%;">
+                        <option value="residential">Residential</option>
+                        <option value="commercial">Commercial</option>
+                        <option value="industrial">Industrial</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Expected System Size (kW)</label>
+                    <input type="number" placeholder="e.g., 6.5" step="0.1" id="codeSystemSize">
+                </div>
+
+                <div style="background: var(--light); padding: 15px; border-radius: var(--radius); margin-bottom: 15px;">
+                    <div style="font-size: 0.85rem; color: var(--gray); margin-bottom: 8px;">Generated Code:</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary); text-align: center;" id="generatedCodeDisplay">BSV-2024-XXXX</div>
+                    <div style="font-size: 0.75rem; color: var(--gray); text-align: center; margin-top: 5px;">This code will be assigned after generation</div>
+                </div>
+
+                <button type="submit" class="btn-primary">Generate & Save Code</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Code Generated Success Modal -->
+    <div id="codeSuccessModal" class="modal">
+        <div class="modal-content" style="max-width: 450px; text-align: center;">
+            <div style="padding: 30px;">
+                <div style="width: 80px; height: 80px; background: rgba(39, 174, 96, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                    <svg viewBox="0 0 24 24" fill="#27AE60" width="40" height="40"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                </div>
+                <h3 style="color: var(--dark); margin-bottom: 10px;">Application Code Generated!</h3>
+                <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 20px;">Share this code with your customer. They will use it to login and track their solar installation.</p>
+
+                <div style="background: var(--light); padding: 20px; border-radius: var(--radius); margin-bottom: 20px;">
+                    <div style="font-size: 2rem; font-weight: 700; color: var(--primary); letter-spacing: 2px;" id="successCodeDisplay">BSV-2024-0007</div>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button class="btn-primary" onclick="copyCodeToClipboard()" style="width: auto; padding: 12px 24px;">
+                        📋 Copy Code
+                    </button>
+                    <button class="btn-secondary" onclick="shareCodeViaWhatsApp()" style="width: auto; padding: 12px 24px;">
+                        📱 WhatsApp
+                    </button>
+                    <button class="btn-secondary" onclick="shareCodeViaSMS()" style="width: auto; padding: 12px 24px;">
+                        💬 SMS
+                    </button>
+                </div>
+
+                <button onclick="closeModal('codeSuccessModal')" style="margin-top: 20px; background: transparent; border: none; color: var(--gray); cursor: pointer;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- All Codes List Modal -->
+    <div id="codesListModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>📋 All Application Codes</h3>
+                <button class="modal-close" onclick="closeModal('codesListModal')">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <div class="search-container" style="margin-bottom: 15px;">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <input type="text" class="search-input" placeholder="Search by code or customer name..." id="codeSearchInput">
+                </div>
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table class="data-table" style="font-size: 0.85rem;">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Customer</th>
+                                <th>Phone</th>
+                                <th>Created</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code style="background: var(--light); padding: 3px 6px; border-radius: 3px;">BSV-2024-0001</code></td>
+                                <td>Alex Smith</td>
+                                <td>+91 98765 43210</td>
+                                <td>15 Jan 2024</td>
+                                <td><span class="status success">Active</span></td>
+                                <td><button class="btn-sm" onclick="copyCode('BSV-2024-0001')">Copy</button></td>
+                            </tr>
+                            <tr>
+                                <td><code style="background: var(--light); padding: 3px 6px; border-radius: 3px;">BSV-2024-0002</code></td>
+                                <td>Sarah Johnson</td>
+                                <td>+91 87654 32109</td>
+                                <td>18 Jan 2024</td>
+                                <td><span class="status success">Active</span></td>
+                                <td><button class="btn-sm" onclick="copyCode('BSV-2024-0002')">Copy</button></td>
+                            </tr>
+                            <tr>
+                                <td><code style="background: var(--light); padding: 3px 6px; border-radius: 3px;">BSV-2024-0003</code></td>
+                                <td>Mike Williams</td>
+                                <td>+91 76543 21098</td>
+                                <td>22 Jan 2024</td>
+                                <td><span class="status success">Active</span></td>
+                                <td><button class="btn-sm" onclick="copyCode('BSV-2024-0003')">Copy</button></td>
+                            </tr>
+                            <tr>
+                                <td><code style="background: var(--warning); color: white; padding: 3px 6px; border-radius: 3px;">BSV-2024-0006</code></td>
+                                <td style="color: var(--gray);">Not Assigned</td>
+                                <td>-</td>
+                                <td>01 Feb 2024</td>
+                                <td><span class="status pending">Pending</span></td>
+                                <td>
+                                    <button class="btn-sm" onclick="copyCode('BSV-2024-0006')">Copy</button>
+                                    <button class="btn-sm" onclick="assignCode('BSV-2024-0006')" style="background: var(--info); margin-left: 5px;">Assign</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="js/app.js"></script>
 </body>
 </html>
