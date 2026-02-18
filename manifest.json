@@ -1,0 +1,91 @@
+{
+  "name": "Bhaskar Solar Management Platform",
+  "short_name": "Bhaskar Solar",
+  "description": "Manage your solar installations, track production, and communicate with vendors",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#2C3E50",
+  "theme_color": "#F4A523",
+  "orientation": "portrait-primary",
+  "scope": "./",
+  "icons": [
+    {
+      "src": "icons/icon-192.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "utilities", "productivity"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Customer Login",
+      "short_name": "Customer",
+      "url": "./index.html#customer",
+      "description": "Login as a customer",
+      "icons": [{ "src": "icons/icon-192.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Vendor Login",
+      "short_name": "Vendor",
+      "url": "./index.html#vendor",
+      "description": "Login as a vendor",
+      "icons": [{ "src": "icons/icon-192.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Production Monitor",
+      "short_name": "Production",
+      "url": "./index.html#production",
+      "description": "View solar production data"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/dashboard.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "label": "Dashboard View"
+    },
+    {
+      "src": "screenshots/mobile.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "label": "Mobile View"
+    }
+  ],
+  "related_applications": [],
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "share_target": {
+    "action": "./index.html",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+bhaskar",
+      "url": "./index.html?action=%s"
+    }
+  ]
+}
