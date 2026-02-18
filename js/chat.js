@@ -35,7 +35,15 @@ const Chat = {
 
         if (session.type === 'customer') {
             // Customer sees their vendor
-            const customer = DataStore.customers.getByUserId(session.userId);
+            // Find customer by phone matching user's phone
+            const user = DataStore.users.getById(session.userId);
+            let customer = null;
+            if (user && user.customerId) {
+                customer = DataStore.customers.getById(user.customerId);
+            }
+            if (!customer && user) {
+                customer = DataStore.customers.getAll().find(c => c.phone === user.phone);
+            }
             if (customer && customer.vendorId) {
                 const vendor = DataStore.users.getById(customer.vendorId);
                 if (vendor) {

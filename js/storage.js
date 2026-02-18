@@ -63,8 +63,19 @@ const UniversalStorage = {
         });
     },
 
-    // Wait for storage to be ready
-    onReady(callback) {
+    // Wait for storage to be ready - returns a promise
+    onReady() {
+        return new Promise((resolve) => {
+            if (this.isReady) {
+                resolve();
+            } else {
+                this.readyCallbacks.push(resolve);
+            }
+        });
+    },
+
+    // Legacy callback support
+    onReadyCallback(callback) {
         if (this.isReady) {
             callback();
         } else {

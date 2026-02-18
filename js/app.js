@@ -6,17 +6,18 @@
 const App = {
     session: null,
 
-    init() {
+    async init() {
         console.log('=== App initializing ===');
         console.log('User Agent:', navigator.userAgent);
         console.log('Platform:', navigator.platform);
 
         // Check localStorage availability
-        if (!DataStore.isStorageAvailable()) {
+        if (!this.isStorageAvailable()) {
             alert('Warning: Local storage is not available. Data will not persist.');
         }
 
-        DataStore.init();
+        // Initialize data store - this is async now
+        await DataStore.init();
 
         // Debug: Check what's in localStorage
         console.log('=== LocalStorage Check ===');
@@ -51,6 +52,17 @@ const App = {
         this.bindEvents();
         this.applyTheme();
         console.log('=== App init complete ===');
+    },
+
+    isStorageAvailable() {
+        try {
+            const test = '__storage_test__';
+            localStorage.setItem(test, test);
+            localStorage.removeItem(test);
+            return true;
+        } catch (e) {
+            return false;
+        }
     },
 
     bindEvents() {
@@ -525,7 +537,7 @@ const App = {
     switchDocTab(tab) { document.querySelectorAll('.doc-tab').forEach(b => b.classList.toggle('active', b.dataset.docTab === tab)); document.querySelectorAll('.doc-panel').forEach(p => p.classList.toggle('active', p.id === tab)); }
 };
 
-document.addEventListener('DOMContentLoaded', () => App.init());
+document.addEventListener('DOMContentLoaded', () => App.init().catch(err => console.error('App init failed:', err)));
 
 function doCustomerLogin() { App.doCustomerLogin(); }
 function doVendorLogin() { App.doVendorLogin(); }

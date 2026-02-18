@@ -26,56 +26,56 @@ const DataStore = {
         console.log('DataStore: Initializing...');
 
         // Wait for UniversalStorage to be ready
-        await UniversalStorage.onReady(async () => {
-            // Load all data into memory cache
-            for (const key of Object.values(this.KEYS)) {
-                const data = await UniversalStorage.get(key);
-                this.cache[key] = data;
-            }
+        await UniversalStorage.onReady();
 
-            // Initialize empty arrays for missing data
-            if (!this.cache[this.KEYS.USERS]) {
-                this.cache[this.KEYS.USERS] = [];
-                await this.save(this.KEYS.USERS);
-            }
-            if (!this.cache[this.KEYS.CUSTOMERS]) {
-                this.cache[this.KEYS.CUSTOMERS] = [];
-                await this.save(this.KEYS.CUSTOMERS);
-            }
-            if (!this.cache[this.KEYS.APP_CODES]) {
-                this.cache[this.KEYS.APP_CODES] = [];
-                await this.save(this.KEYS.APP_CODES);
-            }
-            if (!this.cache[this.KEYS.DOCUMENTS]) {
-                this.cache[this.KEYS.DOCUMENTS] = [];
-                await this.save(this.KEYS.DOCUMENTS);
-            }
-            if (!this.cache[this.KEYS.MESSAGES]) {
-                this.cache[this.KEYS.MESSAGES] = [];
-                await this.save(this.KEYS.MESSAGES);
-            }
-            if (!this.cache[this.KEYS.PRODUCTION]) {
-                this.cache[this.KEYS.PRODUCTION] = [];
-                await this.save(this.KEYS.PRODUCTION);
-            }
-            if (!this.cache[this.KEYS.SETTINGS]) {
-                this.cache[this.KEYS.SETTINGS] = { theme: 'light' };
-                await this.save(this.KEYS.SETTINGS);
-            }
+        // Load all data into memory cache
+        for (const key of Object.values(this.KEYS)) {
+            const data = await UniversalStorage.get(key);
+            this.cache[key] = data;
+        }
 
-            this.initialized = true;
-            console.log('DataStore: Initialized. Users:', this.cache[this.KEYS.USERS]);
-        });
-
-        // Also wait a bit for async init
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Double check cache is loaded
+        // Initialize empty arrays for missing data
         if (!this.cache[this.KEYS.USERS]) {
             this.cache[this.KEYS.USERS] = [];
+            await this.save(this.KEYS.USERS);
+        }
+        if (!this.cache[this.KEYS.CUSTOMERS]) {
+            this.cache[this.KEYS.CUSTOMERS] = [];
+            await this.save(this.KEYS.CUSTOMERS);
+        }
+        if (!this.cache[this.KEYS.APP_CODES]) {
+            this.cache[this.KEYS.APP_CODES] = [];
+            await this.save(this.KEYS.APP_CODES);
+        }
+        if (!this.cache[this.KEYS.DOCUMENTS]) {
+            this.cache[this.KEYS.DOCUMENTS] = [];
+            await this.save(this.KEYS.DOCUMENTS);
+        }
+        if (!this.cache[this.KEYS.MESSAGES]) {
+            this.cache[this.KEYS.MESSAGES] = [];
+            await this.save(this.KEYS.MESSAGES);
+        }
+        if (!this.cache[this.KEYS.PRODUCTION]) {
+            this.cache[this.KEYS.PRODUCTION] = [];
+            await this.save(this.KEYS.PRODUCTION);
+        }
+        if (!this.cache[this.KEYS.SETTINGS]) {
+            this.cache[this.KEYS.SETTINGS] = { theme: 'light' };
+            await this.save(this.KEYS.SETTINGS);
+        }
+
+        // Load session from localStorage for immediate access
+        try {
+            const sessionData = localStorage.getItem('bs_session');
+            if (sessionData) {
+                this.cache[this.KEYS.SESSION] = JSON.parse(sessionData);
+            }
+        } catch (e) {
+            console.warn('Could not load session from localStorage:', e);
         }
 
         this.initialized = true;
+        console.log('DataStore: Initialized. Users:', this.cache[this.KEYS.USERS]);
         console.log('DataStore: Ready');
     },
 
@@ -581,5 +581,17 @@ const DataStore = {
     clearAll() {
         this.cache = {};
         UniversalStorage.clearAll();
+    },
+
+    // Check if storage is available
+    isStorageAvailable() {
+        try {
+            const test = '__storage_test__';
+            localStorage.setItem(test, test);
+            localStorage.removeItem(test);
+            return true;
+        } catch (e) {
+            return false;
+        }
     }
 };
