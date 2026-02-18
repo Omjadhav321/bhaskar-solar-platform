@@ -50,9 +50,17 @@ const App = {
         if (!code) { this.showToast('Please enter your application code', 'warning'); return; }
         if (!phone || phone.length < 10) { this.showToast('Please enter a valid phone number', 'warning'); return; }
 
+        // Check if customer exists with this code
         let customer = DataStore.customers.getByAppCode(code);
+
         if (!customer) {
+            // Check if any vendors exist
             const vendors = DataStore.users.getByType('vendor');
+            if (!vendors.length) {
+                this.showToast('No vendors registered yet. Please wait for vendor registration.', 'warning');
+                return;
+            }
+            // Create new customer with the code
             customer = DataStore.customers.create({
                 vendorId: vendors[0]?.id,
                 name: 'Customer ' + code.slice(-4),
@@ -61,6 +69,7 @@ const App = {
             });
         }
 
+        // Find or create user account
         let user = DataStore.users.getByPhone(phone);
         if (!user) {
             user = DataStore.users.create({
