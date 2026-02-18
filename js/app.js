@@ -1,742 +1,458 @@
-// Bhaskar Solar Platform - Main Application JavaScript
+/**
+ * Bhaskar Solar Platform - Main Application Module
+ */
 
-// State Management
-let currentUser = null;
-let currentUserType = null;
-let applicationCodes = JSON.parse(localStorage.getItem('applicationCodes')) || [];
-let chatMessages = {};
+const App = {
+    session: null,
 
-// Initialize Application
-document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
-});
-
-function initializeApp() {
-    // Initialize login tabs
-    initLoginTabs();
-
-    // Initialize navigation
-    initNavigation();
-
-    // Initialize document tabs
-    initDocTabs();
-
-    // Initialize theme
-    initTheme();
-
-    // Load saved application codes
-    loadApplicationCodes();
-
-    // Initialize production chart
-    renderProductionChart();
-
-    // Initialize chat
-    initChat();
-
-    // Initialize calculators
-    initCalculators();
-
-    // Check for saved session
-    checkSession();
-}
-
-// Session Management
-function checkSession() {
-    const savedUser = localStorage.getItem('currentUser');
-    const savedUserType = localStorage.getItem('currentUserType');
-
-    if (savedUser && savedUserType) {
-        currentUser = JSON.parse(savedUser);
-        currentUserType = savedUserType;
-
-        if (currentUserType === 'customer') {
-            showPage('customerDashboard');
-            updateCustomerDashboard();
+    init() {
+        DataStore.init();
+        this.session = DataStore.session.get();
+        if (this.session) {
+            this.showDashboard();
         } else {
-            showPage('vendorDashboard');
-            updateVendorDashboard();
+            this.showPage('loginPage');
         }
-    }
-}
+        this.bindEvents();
+        this.applyTheme();
+    },
 
-function saveSession() {
-    if (currentUser) {
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-        localStorage.setItem('currentUserType', currentUserType);
-    }
-}
-
-function clearSession() {
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('currentUserType');
-    currentUser = null;
-    currentUserType = null;
-}
-
-// Login Tab Switching
-function initLoginTabs() {
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const tab = this.dataset.tab;
-
-            // Update active tab button
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-
-            // Show corresponding form
-            document.querySelectorAll('.login-form').forEach(f => f.classList.remove('active'));
-            document.getElementById(tab + 'Login').classList.add('active');
+    bindEvents() {
+        document.querySelectorAll('.login-tabs .tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => this.switchLoginTab(e.target.dataset.tab));
         });
-    });
-}
-
-// Navigation
-function initNavigation() {
-    // Desktop nav buttons
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const section = this.dataset.section;
-            navigateToSection(getCurrentDashboard(), section, []);
-        });
-    });
-
-    // Bottom nav (mobile)
-    document.querySelectorAll('.bottom-nav-item').forEach(item => {
-        item.addEventListener('click', function() {
-            const section = this.dataset.section;
-
-            // Update active state
-            document.querySelectorAll('.bottom-nav-item').forEach(i => i.classList.remove('active'));
-            this.classList.add('active');
-
-            navigateToSection(getCurrentDashboard(), section, []);
-        });
-    });
-}
-
-function getCurrentDashboard() {
-    const customerDash = document.getElementById('customerDashboard');
-    const vendorDash = document.getElementById('vendorDashboard');
-
-    if (customerDash && customerDash.classList.contains('active')) {
-        return 'customerDashboard';
-    } else if (vendorDash && vendorDash.classList.contains('active')) {
-        return 'vendorDashboard';
-    }
-    return null;
-}
-
-function navigateToSection(dashboardId, sectionId, params) {
-    // Hide all sections in the dashboard
-    const dashboard = document.getElementById(dashboardId);
-    if (!dashboard) return;
-
-    dashboard.querySelectorAll('.dashboard-section').forEach(section => {
-        section.classList.remove('active');
-    });
-
-    // Show target section
-    const targetSection = document.getElementById(sectionId);
-    if (targetSection) {
-        targetSection.classList.add('active');
-    }
-
-    // Update nav buttons
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.section === sectionId);
-    });
-
-    document.querySelectorAll('.bottom-nav-item').forEach(item => {
-        item.classList.toggle('active', item.dataset.section === sectionId);
-    });
-
-    // Close mobile menu if open
-    closeMobileMenu();
-}
-
-// Page Management
-function showPage(pageId) {
-    document.querySelectorAll('.page').forEach(page => {
-        page.classList.remove('active');
-    });
-
-    const targetPage = document.getElementById(pageId);
-    if (targetPage) {
-        targetPage.classList.add('active');
-    }
-}
-
-// Customer Login
-function doCustomerLogin() {
-    const code = document.getElementById('customerCode').value.trim().toUpperCase();
-    const phone = document.getElementById('customerPhone').value.trim();
-    const address = document.getElementById('customerAddress').value.trim();
-
-    // Validation
-    if (!code) {
-        showToast('Please enter your application code', 'error');
-        return;
-    }
-    if (!phone || phone.length !== 10) {
-        showToast('Please enter a valid 10-digit phone number', 'error');
-        return;
-    }
-    if (!address) {
-        showToast('Please enter your site address', 'error');
-        return;
-    }
-
-    // Check if code exists or create mock user
-    let user = applicationCodes.find(c => c.code === code);
-
-    if (!user) {
-        // Create new user with this code (demo mode)
-        user = {
-            code: code,
-            phone: phone,
-            address: address,
-            name: 'Customer',
-            createdAt: new Date().toISOString(),
-            status: 'Active'
-        };
-        applicationCodes.push(user);
-        saveApplicationCodes();
-    }
-
-    currentUser = user;
-    currentUserType = 'customer';
-    saveSession();
-
-    showToast('Login successful!', 'success');
-    showPage('customerDashboard');
-    updateCustomerDashboard();
-}
-
-// Vendor Login
-function doVendorLogin() {
-    const vendorId = document.getElementById('vendorId').value.trim();
-    const phone = document.getElementById('vendorPhone').value.trim();
-    const code = document.getElementById('vendorCode').value.trim();
-
-    // Validation
-    if (!vendorId) {
-        showToast('Please enter your vendor ID', 'error');
-        return;
-    }
-    if (!phone || phone.length !== 10) {
-        showToast('Please enter a valid 10-digit phone number', 'error');
-        return;
-    }
-    if (!code) {
-        showToast('Please enter your access code', 'error');
-        return;
-    }
-
-    // Demo: Accept any vendor login
-    currentUser = {
-        id: vendorId,
-        phone: phone,
-        name: 'Vendor',
-        company: 'Solar Solutions'
-    };
-    currentUserType = 'vendor';
-    saveSession();
-
-    showToast('Vendor login successful!', 'success');
-    showPage('vendorDashboard');
-    updateVendorDashboard();
-}
-
-// Logout
-function logout() {
-    clearSession();
-    showPage('loginPage');
-
-    // Clear form inputs
-    document.getElementById('customerCode').value = '';
-    document.getElementById('customerPhone').value = '';
-    document.getElementById('customerAddress').value = '';
-    document.getElementById('vendorId').value = '';
-    document.getElementById('vendorPhone').value = '';
-    document.getElementById('vendorCode').value = '';
-
-    showToast('Logged out successfully', 'info');
-    closeMobileMenu();
-}
-
-// Update Dashboards
-function updateCustomerDashboard() {
-    if (!currentUser) return;
-
-    // Update customer name
-    const nameElements = document.querySelectorAll('#customerName, #mobileUserName');
-    nameElements.forEach(el => {
-        if (el) el.textContent = currentUser.name || 'Customer';
-    });
-
-    // Update application code display
-    const codeElement = document.getElementById('customerAppCode');
-    if (codeElement) {
-        codeElement.textContent = currentUser.code || 'BSV-2024-0001';
-    }
-
-    // Update mobile menu initials
-    const initialsEl = document.getElementById('mobileUserInitials');
-    if (initialsEl && currentUser.name) {
-        initialsEl.textContent = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
-    }
-}
-
-function updateVendorDashboard() {
-    if (!currentUser) return;
-
-    // Update vendor name displays
-    const nameElements = document.querySelectorAll('#vendorName, #mobileUserName');
-    nameElements.forEach(el => {
-        if (el) el.textContent = currentUser.name || currentUser.company || 'Vendor';
-    });
-
-    // Update mobile menu initials
-    const initialsEl = document.getElementById('mobileUserInitials');
-    if (initialsEl) {
-        const name = currentUser.name || currentUser.company || 'Vendor';
-        initialsEl.textContent = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
-    }
-}
-
-// Mobile Menu
-function toggleMobileMenu() {
-    const menu = document.getElementById('mobileMenu');
-    const overlay = document.querySelector('.mobile-menu-overlay');
-
-    if (menu) menu.classList.toggle('active');
-    if (overlay) overlay.classList.toggle('active');
-}
-
-function closeMobileMenu() {
-    const menu = document.getElementById('mobileMenu');
-    const overlay = document.querySelector('.mobile-menu-overlay');
-
-    if (menu) menu.classList.remove('active');
-    if (overlay) overlay.classList.remove('active');
-}
-
-// Theme Management
-function initTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    if (savedTheme === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-    }
-}
-
-function toggleTheme() {
-    const currentTheme = document.documentElement.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
-}
-
-// Document Tabs
-function initDocTabs() {
-    document.querySelectorAll('.doc-tab').forEach(tab => {
-        tab.addEventListener('click', function() {
-            const tabId = this.dataset.docTab;
-
-            // Update active tab
-            document.querySelectorAll('.doc-tab').forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
-
-            // Show corresponding panel
-            document.querySelectorAll('.doc-panel').forEach(p => p.classList.remove('active'));
-            const panel = document.getElementById(tabId);
-            if (panel) panel.classList.add('active');
-        });
-    });
-}
-
-// Production Chart
-function renderProductionChart() {
-    const chartArea = document.getElementById('productionChartArea');
-    const chartLabels = document.getElementById('chartLabels');
-
-    if (!chartArea || !chartLabels) return;
-
-    // Sample data for the week
-    const data = [8.2, 12.5, 15.3, 11.8, 14.2, 16.1, 13.7];
-    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const maxValue = Math.max(...data);
-
-    chartArea.innerHTML = '';
-    chartLabels.innerHTML = '';
-
-    data.forEach((value, index) => {
-        const height = (value / maxValue) * 100;
-        const bar = document.createElement('div');
-        bar.className = 'chart-bar';
-        bar.style.height = height + '%';
-        bar.setAttribute('data-value', value + ' kWh');
-        chartArea.appendChild(bar);
-
-        const label = document.createElement('span');
-        label.textContent = labels[index];
-        chartLabels.appendChild(label);
-    });
-}
-
-function setChartPeriod(period) {
-    // Update active button
-    document.querySelectorAll('.period-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    event.target.classList.add('active');
-
-    // Re-render chart with different data (demo)
-    renderProductionChart();
-    showToast('Showing ' + period + ' data', 'info');
-}
-
-// Toast Notifications
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-
-    const toast = document.createElement('div');
-    toast.className = 'toast ' + type;
-    toast.innerHTML = `
-        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-            ${type === 'success' ? '<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>' :
-              type === 'error' ? '<path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>' :
-              '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>'}
-        </svg>
-        <span>${message}</span>
-    `;
-
-    container.appendChild(toast);
-
-    // Auto remove after 3 seconds
-    setTimeout(() => {
-        toast.style.animation = 'slideIn 0.3s ease reverse';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
-
-// Modal Management
-function showModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.add('active');
-    }
-}
-
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('active');
-    }
-}
-
-// Close modal when clicking outside
-document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('modal')) {
-        e.target.classList.remove('active');
-    }
-});
-
-// Application Code Management
-function loadApplicationCodes() {
-    const saved = localStorage.getItem('applicationCodes');
-    if (saved) {
-        applicationCodes = JSON.parse(saved);
-    }
-}
-
-function saveApplicationCodes() {
-    localStorage.setItem('applicationCodes', JSON.stringify(applicationCodes));
-}
-
-function generateApplicationCode(event) {
-    event.preventDefault();
-
-    const customerName = document.getElementById('codeCustomerName').value.trim();
-    const customerPhone = document.getElementById('codeCustomerPhone').value.trim();
-    const siteAddress = document.getElementById('codeSiteAddress').value.trim();
-    const projectType = document.getElementById('codeProjectType').value;
-    const systemSize = document.getElementById('codeSystemSize').value;
-
-    // Generate new code
-    const year = new Date().getFullYear();
-    const existingCodes = applicationCodes.filter(c => c.code.startsWith('BSV-' + year));
-    const nextNum = (existingCodes.length + 1).toString().padStart(4, '0');
-    const newCode = `BSV-${year}-${nextNum}`;
-
-    // Create entry
-    const entry = {
-        code: newCode,
-        name: customerName || 'Not Assigned',
-        phone: customerPhone || '-',
-        address: siteAddress,
-        projectType: projectType,
-        systemSize: systemSize,
-        createdAt: new Date().toISOString(),
-        status: customerPhone ? 'Active' : 'Pending'
-    };
-
-    applicationCodes.push(entry);
-    saveApplicationCodes();
-
-    // Update display
-    document.getElementById('successCodeDisplay').textContent = newCode;
-
-    // Show success modal
-    closeModal('generateCodeModal');
-    showModal('codeSuccessModal');
-
-    showToast('Application code generated successfully!', 'success');
-}
-
-function copyCodeToClipboard() {
-    const code = document.getElementById('successCodeDisplay').textContent;
-    navigator.clipboard.writeText(code).then(() => {
-        showToast('Code copied to clipboard!', 'success');
-    });
-}
-
-function shareCodeViaWhatsApp() {
-    const code = document.getElementById('successCodeDisplay').textContent;
-    const message = encodeURIComponent(`Your Bhaskar Solar application code is: ${code}\n\nUse this code to login and track your solar installation at our portal.`);
-    window.open(`https://wa.me/?text=${message}`, '_blank');
-}
-
-function shareCodeViaSMS() {
-    const code = document.getElementById('successCodeDisplay').textContent;
-    const message = encodeURIComponent(`Your Bhaskar Solar code: ${code}`);
-    window.open(`sms:?body=${message}`, '_blank');
-}
-
-function copyCode(code) {
-    navigator.clipboard.writeText(code).then(() => {
-        showToast('Code copied!', 'success');
-    });
-}
-
-function assignCode(code) {
-    showToast('Assign functionality - Open customer form for ' + code, 'info');
-}
-
-// Support Form
-function submitSupport(event) {
-    event.preventDefault();
-
-    const type = document.getElementById('supportType').value;
-    const priority = document.getElementById('supportPriority').value;
-    const description = document.getElementById('supportDescription').value;
-
-    // Demo: Just show success
-    closeModal('supportModal');
-    showToast('Support request submitted! We will contact you soon.', 'success');
-
-    // Reset form
-    event.target.reset();
-}
-
-// Quotation Builder
-function generateQuotation(event) {
-    event.preventDefault();
-
-    const systemSize = parseFloat(document.querySelector('#quotationModal input[placeholder="e.g., 6.5"]').value);
-    const equipmentCost = parseFloat(document.getElementById('equipmentCost').value) || 0;
-    const installationCost = parseFloat(document.getElementById('installationCost').value) || 0;
-
-    const total = equipmentCost + installationCost;
-
-    closeModal('quotationModal');
-    showToast(`Quotation generated! Total: ₹${total.toLocaleString()}`, 'success');
-}
-
-// Calculator Functions
-function initCalculators() {
-    // Calculator event listeners are set inline in HTML
-}
-
-function calculateSystemSize() {
-    const monthlyBill = parseFloat(document.getElementById('vendorMonthlyBill').value);
-    const resultEl = document.getElementById('systemSizeResult');
-
-    if (!monthlyBill || monthlyBill <= 0) {
-        resultEl.innerHTML = '<span style="color: var(--danger);">Please enter a valid bill amount</span>';
-        return;
-    }
-
-    // Rough calculation: ₹6 per kWh, 120 kWh per kW per month
-    const monthlyUnits = monthlyBill / 6;
-    const systemSize = (monthlyUnits / 120).toFixed(1);
-
-    resultEl.innerHTML = `
-        <div style="font-size: 1.2rem; color: var(--success);">
-            Recommended: <strong>${systemSize} kW</strong> System
-        </div>
-        <div style="font-size: 0.85rem; color: var(--gray); margin-top: 5px;">
-            Estimated ${Math.round(systemSize * 4)} panels needed
-        </div>
-    `;
-}
-
-function calculateROI() {
-    const systemCost = parseFloat(document.getElementById('systemCost').value);
-    const annualSavings = parseFloat(document.getElementById('annualSavings').value);
-    const resultEl = document.getElementById('roiResult');
-
-    if (!systemCost || !annualSavings || systemCost <= 0 || annualSavings <= 0) {
-        resultEl.innerHTML = '<span style="color: var(--danger);">Please enter valid values</span>';
-        return;
-    }
-
-    const paybackYears = (systemCost / annualSavings).toFixed(1);
-    const lifetimeSavings = (annualSavings * 25) - systemCost;
-
-    resultEl.innerHTML = `
-        <div style="font-size: 1.2rem; color: var(--success);">
-            Payback: <strong>${paybackYears} years</strong>
-        </div>
-        <div style="font-size: 0.85rem; color: var(--gray); margin-top: 5px;">
-            25-year savings: ₹${lifetimeSavings.toLocaleString()}
-        </div>
-    `;
-}
-
-// Chat Functionality
-function initChat() {
-    // Sample contacts
-    const contacts = [
-        { id: 1, name: 'Support Team', avatar: 'ST', lastMessage: 'How can we help you?' },
-        { id: 2, name: 'Technical Team', avatar: 'TT', lastMessage: 'Your query is being processed' }
-    ];
-
-    const chatList = document.querySelector('.chat-list');
-    if (!chatList) return;
-
-    chatList.innerHTML = contacts.map(contact => `
-        <div class="chat-item" onclick="selectChat(${contact.id})">
-            <div class="contact-avatar">${contact.avatar}</div>
-            <div class="chat-preview">
-                <div class="chat-preview-name">${contact.name}</div>
-                <div class="chat-preview-text">${contact.lastMessage}</div>
-            </div>
-        </div>
-    `).join('');
-
-    // Initialize chat input
-    const chatInputBtn = document.querySelector('.chat-input button');
-    const chatInputField = document.querySelector('.chat-input input');
-
-    if (chatInputBtn && chatInputField) {
-        chatInputBtn.addEventListener('click', sendMessage);
-        chatInputField.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
-    }
-}
-
-function selectChat(contactId) {
-    // Update active chat
-    document.querySelectorAll('.chat-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    event.currentTarget.classList.add('active');
-
-    // Load chat messages (demo)
-    const chatMessages = document.querySelector('.chat-messages');
-    if (chatMessages) {
-        chatMessages.innerHTML = `
-            <div class="message">
-                <div class="message-bubble">Hello! How can we help you with your solar installation?</div>
-                <div class="message-time">10:30 AM</div>
-            </div>
-            <div class="message sent">
-                <div class="message-bubble">I have a question about my application status.</div>
-                <div class="message-time">10:32 AM</div>
-            </div>
-            <div class="message">
-                <div class="message-bubble">Sure! Let me check that for you. Your application is currently under review.</div>
-                <div class="message-time">10:33 AM</div>
-            </div>
-        `;
-    }
-}
-
-function sendMessage() {
-    const input = document.querySelector('.chat-input input');
-    const message = input.value.trim();
-
-    if (!message) return;
-
-    const chatMessages = document.querySelector('.chat-messages');
-    if (chatMessages) {
-        const msgEl = document.createElement('div');
-        msgEl.className = 'message sent';
-        msgEl.innerHTML = `
-            <div class="message-bubble">${message}</div>
-            <div class="message-time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-        `;
-        chatMessages.appendChild(msgEl);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    input.value = '';
-
-    // Simulate response
-    setTimeout(() => {
-        const responseEl = document.createElement('div');
-        responseEl.className = 'message';
-        responseEl.innerHTML = `
-            <div class="message-bubble">Thank you for your message. Our team will respond shortly.</div>
-            <div class="message-time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-        `;
-        chatMessages.appendChild(responseEl);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }, 1000);
-}
-
-// FAB Quick Actions
-function toggleQuickActions() {
-    showToast('Quick actions menu - Add new item', 'info');
-}
-
-// Search Functionality
-function initSearch() {
-    const productionSearch = document.getElementById('productionSearch');
-    const codeSearchInput = document.getElementById('codeSearchInput');
-
-    if (productionSearch) {
-        productionSearch.addEventListener('input', function() {
-            // Filter production data (demo)
-            showToast('Searching: ' + this.value, 'info');
-        });
-    }
-
-    if (codeSearchInput) {
-        codeSearchInput.addEventListener('input', function() {
-            // Filter codes table (demo)
-            const searchTerm = this.value.toLowerCase();
-            document.querySelectorAll('.data-table tbody tr').forEach(row => {
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(searchTerm) ? '' : 'none';
+        document.querySelectorAll('.nav-btn, .bottom-nav-item').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (e.currentTarget.dataset.section) {
+                    this.navigateToSection(e.currentTarget.dataset.section);
+                }
             });
         });
+        document.querySelectorAll('.doc-tab').forEach(btn => {
+            btn.addEventListener('click', (e) => this.switchDocTab(e.target.dataset.docTab));
+        });
+    },
+
+    switchLoginTab(tab) {
+        document.querySelectorAll('.login-tabs .tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tab);
+        });
+        document.querySelectorAll('.login-form').forEach(form => {
+            form.classList.toggle('active', form.id === tab + 'Login');
+        });
+    },
+
+    doCustomerLogin() {
+        const code = document.getElementById('customerCode')?.value.trim().toUpperCase();
+        const phone = document.getElementById('customerPhone')?.value.trim();
+        const address = document.getElementById('customerAddress')?.value.trim();
+
+        if (!code) { this.showToast('Please enter your application code', 'warning'); return; }
+        if (!phone || phone.length < 10) { this.showToast('Please enter a valid phone number', 'warning'); return; }
+
+        let customer = DataStore.customers.getByAppCode(code);
+        if (!customer) {
+            const vendors = DataStore.users.getByType('vendor');
+            customer = DataStore.customers.create({
+                vendorId: vendors[0]?.id,
+                name: 'Customer ' + code.slice(-4),
+                phone: phone,
+                address: address || 'Not provided'
+            });
+        }
+
+        let user = DataStore.users.getByPhone(phone);
+        if (!user) {
+            user = DataStore.users.create({
+                type: 'customer',
+                customerId: customer.id,
+                name: customer.name,
+                phone: phone,
+                address: address || customer.address,
+                password: 'customer'
+            });
+        }
+
+        this.session = DataStore.session.login(user);
+        this.showToast('Welcome, ' + user.name + '!', 'success');
+        this.showDashboard();
+    },
+
+    doVendorLogin() {
+        const phone = document.getElementById('vendorPhone')?.value.trim();
+        const code = document.getElementById('vendorCode')?.value.trim();
+
+        if (!phone || phone.length < 10) { this.showToast('Please enter a valid phone number', 'warning'); return; }
+        if (!code) { this.showToast('Please enter your access code', 'warning'); return; }
+
+        const user = DataStore.users.validateLogin(phone, code, 'vendor');
+        if (!user) {
+            this.showToast('Invalid credentials. Try: 9876543210 / vendor123', 'error');
+            return;
+        }
+
+        this.session = DataStore.session.login(user);
+        this.showToast('Welcome, ' + user.name + '!', 'success');
+        this.showDashboard();
+    },
+
+    logout() {
+        DataStore.session.logout();
+        this.session = null;
+        this.showToast('Logged out successfully', 'info');
+        this.showPage('loginPage');
+        document.querySelectorAll('.login-form input').forEach(input => input.value = '');
+    },
+
+    showPage(pageId) {
+        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+        const page = document.getElementById(pageId);
+        if (page) { page.classList.add('active'); }
+    },
+
+    showDashboard() {
+        if (!this.session) return;
+
+        if (this.session.type === 'customer') {
+            this.showPage('customerDashboard');
+            this.updateCustomerDashboard();
+        } else {
+            this.showPage('vendorDashboard');
+            this.updateVendorDashboard();
+        }
+        Charts.init();
+        Chat.init();
+    },
+
+    navigateToSection(section) {
+        document.querySelectorAll('.dashboard-section').forEach(s => s.classList.remove('active'));
+        const sectionEl = document.getElementById(section);
+        if (sectionEl) { sectionEl.classList.add('active'); }
+
+        document.querySelectorAll('.nav-btn, .bottom-nav-item').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.section === section);
+        });
+
+        this.loadSectionData(section);
+    },
+
+    loadSectionData(section) {
+        switch (section) {
+            case 'production': this.loadProductionData(); break;
+            case 'documents': this.loadDocuments(); break;
+            case 'chat': Chat.loadContacts(); break;
+            case 'customers': this.loadCustomers(); break;
+            case 'projects': this.loadProjects(); break;
+        }
+    },
+
+    updateCustomerDashboard() {
+        const user = DataStore.users.getById(this.session?.userId);
+        let customer = user?.customerId ? DataStore.customers.getById(user.customerId) : null;
+        if (!customer) customer = DataStore.customers.getAll().find(c => c.phone === user?.phone);
+        if (!customer) customer = DataStore.customers.getAll()[0];
+
+        if (customer) {
+            document.getElementById('customerName').textContent = customer.name;
+            document.getElementById('customerAppCode').textContent = customer.appCode;
+            document.getElementById('mobileUserName').textContent = customer.name;
+            document.getElementById('mobileUserInitials').textContent = this.getInitials(customer.name);
+
+            const cap = customer.systemCapacity || 5;
+            DataStore.production.generateDailyData(customer.id, cap);
+            const stats = DataStore.production.getStats(customer.id);
+
+            Charts.updateStats({
+                todayProduction: stats.today.toFixed(1),
+                monthProduction: stats.thisMonth.toFixed(1),
+                efficiency: stats.efficiency,
+                co2Saved: stats.co2Saved
+            });
+
+            Charts.renderProductionChart('productionChartArea', {
+                hourlyData: DataStore.production.generateDailyData(customer.id, cap).hourlyData,
+                weekData: DataStore.production.getWeeklyData(customer.id),
+                monthData: DataStore.production.getMonthlyData(customer.id)
+            }, 'week');
+
+            Charts.startRealTimeUpdates(customer.id);
+        }
+    },
+
+    updateVendorDashboard() {
+        const user = DataStore.users.getById(this.session?.userId);
+        if (user) document.getElementById('vendorName').textContent = user.name;
+        this.loadVendorStats();
+    },
+
+    loadVendorStats() {
+        const customers = DataStore.customers.getByVendor(this.session?.userId);
+        const counterEl = document.querySelector('.stats-showcase .animated-counter');
+        if (counterEl) Charts.animateCounter(counterEl, customers.length);
+    },
+
+    loadProductionData() {
+        let customer = null;
+        if (this.session?.type === 'customer') {
+            const user = DataStore.users.getById(this.session.userId);
+            customer = DataStore.customers.getAll().find(c => c.phone === user?.phone);
+        } else {
+            customer = DataStore.customers.getAll()[0];
+        }
+        if (customer) {
+            const stats = DataStore.production.getStats(customer.id);
+            Charts.updateStats({
+                todayProduction: stats.today.toFixed(1),
+                monthProduction: stats.thisMonth.toFixed(1),
+                efficiency: stats.efficiency,
+                co2Saved: stats.co2Saved
+            });
+        }
+    },
+
+    loadDocuments() {
+        let customerId = null;
+        if (this.session?.type === 'customer') {
+            const user = DataStore.users.getById(this.session.userId);
+            const customer = DataStore.customers.getAll().find(c => c.phone === user?.phone);
+            customerId = customer?.id;
+        }
+        const docs = customerId ? DataStore.documents.getByCustomer(customerId) : [];
+        this.renderDocuments(docs);
+    },
+
+    renderDocuments(docs) {
+        ['warranty', 'quotation', 'utility', 'contracts'].forEach(cat => {
+            const container = document.querySelector('#' + cat + ' .doc-list');
+            if (!container) return;
+            const catDocs = docs.filter(d => d.type === cat);
+            if (!catDocs.length) {
+                container.innerHTML = '<div class="no-docs"><p>No documents uploaded</p></div>';
+                return;
+            }
+            container.innerHTML = catDocs.map(d => `
+                <div class="doc-item">
+                    <div class="doc-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg></div>
+                    <div class="doc-info"><span class="doc-name">${d.name}</span><span class="doc-meta">${d.type} • ${(d.size/1024).toFixed(1)} KB</span></div>
+                    <button class="btn-sm" onclick="App.viewDocument('${d.id}')">View</button>
+                    <button class="btn-sm btn-danger" onclick="App.deleteDocument('${d.id}')">×</button>
+                </div>
+            `).join('');
+        });
+    },
+
+    uploadDocument() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.pdf,.jpg,.jpeg,.png';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) { this.showToast('Max 5MB', 'error'); return; }
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                let customerId = null;
+                if (this.session?.type === 'customer') {
+                    const user = DataStore.users.getById(this.session.userId);
+                    const customer = DataStore.customers.getAll().find(c => c.phone === user?.phone);
+                    customerId = customer?.id;
+                }
+                if (!customerId) { this.showToast('Customer not found', 'error'); return; }
+                const docType = prompt('Type (warranty/quotation/utility/contracts):', 'warranty');
+                DataStore.documents.create({ customerId, name: file.name, type: docType || 'warranty', data: ev.target.result, size: file.size });
+                this.showToast('Uploaded!', 'success');
+                this.loadDocuments();
+            };
+            reader.readAsDataURL(file);
+        };
+        input.click();
+    },
+
+    viewDocument(id) {
+        const doc = DataStore.documents.getById(id);
+        if (!doc) return;
+        const win = window.open('', '_blank');
+        win.document.write(`<html><head><title>${doc.name}</title></head><body style="margin:0;padding:20px;background:#f5f5f5;"><img src="${doc.data}" style="max-width:100%;"></body></html>`);
+    },
+
+    deleteDocument(id) {
+        if (!confirm('Delete this document?')) return;
+        DataStore.documents.delete(id);
+        this.showToast('Deleted', 'info');
+        this.loadDocuments();
+    },
+
+    loadCustomers() {
+        if (this.session?.type !== 'vendor') return;
+        const customers = DataStore.customers.getByVendor(this.session.userId);
+        const container = document.getElementById('customerList');
+        if (!container) return;
+
+        if (!customers.length) {
+            container.innerHTML = '<div class="no-data"><p>No customers yet</p><button class="btn-primary" onclick="App.showAddCustomerModal()">Add Customer</button></div>';
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="customer-list-header">
+                <input type="text" class="search-input" placeholder="Search..." onkeyup="App.searchCustomers(this.value)">
+                <button class="btn-primary" onclick="App.showAddCustomerModal()">Add Customer</button>
+            </div>
+            <div class="customer-grid">
+                ${customers.map(c => `
+                    <div class="customer-card">
+                        <div class="customer-card-header">
+                            <div class="customer-avatar">${this.getInitials(c.name)}</div>
+                            <div class="customer-info"><h4>${c.name}</h4><span class="customer-code">${c.appCode}</span></div>
+                            <span class="status ${c.status}">${c.status}</span>
+                        </div>
+                        <div class="customer-card-body">
+                            <p><strong>Phone:</strong> ${c.phone}</p>
+                            <p><strong>System:</strong> ${c.systemCapacity} kW</p>
+                        </div>
+                        <div class="customer-card-actions">
+                            <button class="btn-sm" onclick="App.editCustomer('${c.id}')">Edit</button>
+                            <button class="btn-sm btn-danger" onclick="App.deleteCustomer('${c.id}')">×</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    },
+
+    showAddCustomerModal() { this.showModal('addCustomerModal'); },
+
+    addCustomer() {
+        const name = document.getElementById('newCustomerName')?.value.trim();
+        const phone = document.getElementById('newCustomerPhone')?.value.trim();
+        const address = document.getElementById('newCustomerAddress')?.value.trim();
+        const capacity = parseFloat(document.getElementById('newCustomerCapacity')?.value) || 5;
+        const panels = parseInt(document.getElementById('newCustomerPanels')?.value) || 12;
+
+        if (!name || !phone) { this.showToast('Name and phone required', 'warning'); return; }
+
+        const customer = DataStore.customers.create({
+            vendorId: this.session.userId, name, phone, address: address || 'N/A',
+            systemCapacity: capacity, panels, status: 'pending'
+        });
+
+        DataStore.users.create({
+            type: 'customer', customerId: customer.id, name, phone,
+            address: address || 'N/A', password: 'customer'
+        });
+
+        this.showToast('Created! Code: ' + customer.appCode, 'success');
+        this.closeModal('addCustomerModal');
+        this.loadCustomers();
+    },
+
+    editCustomer(id) {
+        const c = DataStore.customers.getById(id);
+        if (!c) return;
+        document.getElementById('editCustomerId').value = c.id;
+        document.getElementById('editCustomerName').value = c.name;
+        document.getElementById('editCustomerPhone').value = c.phone;
+        document.getElementById('editCustomerAddress').value = c.address;
+        document.getElementById('editCustomerCapacity').value = c.systemCapacity;
+        document.getElementById('editCustomerPanels').value = c.panels;
+        document.getElementById('editCustomerStatus').value = c.status;
+        this.showModal('editCustomerModal');
+    },
+
+    updateCustomer() {
+        DataStore.customers.update(document.getElementById('editCustomerId')?.value, {
+            name: document.getElementById('editCustomerName')?.value.trim(),
+            phone: document.getElementById('editCustomerPhone')?.value.trim(),
+            address: document.getElementById('editCustomerAddress')?.value.trim(),
+            systemCapacity: parseFloat(document.getElementById('editCustomerCapacity')?.value) || 5,
+            panels: parseInt(document.getElementById('editCustomerPanels')?.value) || 12,
+            status: document.getElementById('editCustomerStatus')?.value
+        });
+        this.showToast('Updated', 'success');
+        this.closeModal('editCustomerModal');
+        this.loadCustomers();
+    },
+
+    deleteCustomer(id) {
+        if (!confirm('Delete this customer?')) return;
+        DataStore.customers.delete(id);
+        this.showToast('Deleted', 'info');
+        this.loadCustomers();
+    },
+
+    searchCustomers(q) {
+        const customers = DataStore.customers.search(q, this.session.userId);
+        const container = document.querySelector('.customer-grid');
+        if (!container) return;
+        container.innerHTML = customers.map(c => `
+            <div class="customer-card">
+                <div class="customer-card-header">
+                    <div class="customer-avatar">${this.getInitials(c.name)}</div>
+                    <div class="customer-info"><h4>${c.name}</h4><span class="customer-code">${c.appCode}</span></div>
+                    <span class="status ${c.status}">${c.status}</span>
+                </div>
+                <div class="customer-card-body"><p><strong>Phone:</strong> ${c.phone}</p></div>
+                <div class="customer-card-actions">
+                    <button class="btn-sm" onclick="App.editCustomer('${c.id}')">Edit</button>
+                    <button class="btn-sm btn-danger" onclick="App.deleteCustomer('${c.id}')">×</button>
+                </div>
+            </div>
+        `).join('');
+    },
+
+    loadProjects() {
+        const customers = DataStore.customers.getByVendor(this.session?.userId).filter(c => c.status === 'active' || c.status === 'pending');
+        const container = document.getElementById('projectList');
+        if (!container) return;
+        if (!customers.length) { container.innerHTML = '<div class="no-data"><p>No active projects</p></div>'; return; }
+        container.innerHTML = customers.map(p => `
+            <div class="project-card">
+                <div class="project-header"><h4>${p.name}</h4><span class="status ${p.status}">${p.status}</span></div>
+                <div class="project-body">
+                    <div class="project-stat"><span class="label">System</span><span class="value">${p.systemCapacity} kW</span></div>
+                    <div class="project-stat"><span class="label">Code</span><span class="value">${p.appCode}</span></div>
+                </div>
+            </div>
+        `).join('');
+    },
+
+    showModal(id) { const m = document.getElementById(id); if (m) { m.classList.add('active'); document.body.style.overflow = 'hidden'; } },
+    closeModal(id) { const m = document.getElementById(id); if (m) { m.classList.remove('active'); document.body.style.overflow = ''; } },
+    toggleMobileMenu() { document.getElementById('mobileMenu')?.classList.toggle('active'); document.querySelector('.mobile-menu-overlay')?.classList.toggle('active'); },
+    closeMobileMenu() { document.getElementById('mobileMenu')?.classList.remove('active'); document.querySelector('.mobile-menu-overlay')?.classList.remove('active'); },
+    toggleTheme() { const t = DataStore.settings.get().theme === 'light' ? 'dark' : 'light'; DataStore.settings.setTheme(t); this.applyTheme(); },
+    applyTheme() { const t = DataStore.settings.get().theme; document.documentElement.setAttribute('data-theme', t); document.querySelectorAll('.theme-toggle').forEach(el => el.classList.toggle('dark', t === 'dark')); },
+    showToast(msg, type = 'info') { const c = document.getElementById('toastContainer'); if (!c) return; const t = document.createElement('div'); t.className = 'toast toast-' + type; t.innerHTML = `<span class="toast-message">${msg}</span><button class="toast-close" onclick="this.parentElement.remove()">×</button>`; c.appendChild(t); setTimeout(() => { t.classList.add('fade-out'); setTimeout(() => t.remove(), 300); }, 4000); },
+    getInitials(name) { return name ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '??'; },
+    switchDocTab(tab) { document.querySelectorAll('.doc-tab').forEach(b => b.classList.toggle('active', b.dataset.docTab === tab)); document.querySelectorAll('.doc-panel').forEach(p => p.classList.toggle('active', p.id === tab)); }
+};
+
+document.addEventListener('DOMContentLoaded', () => App.init());
+
+function doCustomerLogin() { App.doCustomerLogin(); }
+function doVendorLogin() { App.doVendorLogin(); }
+function logout() { App.logout(); }
+function toggleMobileMenu() { App.toggleMobileMenu(); }
+function closeMobileMenu() { App.closeMobileMenu(); }
+function toggleTheme() { App.toggleTheme(); }
+function showModal(id) { App.showModal(id); }
+function closeModal(id) { App.closeModal(id); }
+function sendChatMessage() { Chat.sendMessage(); }
+function calculateEnergy() { Calculators.calculateEnergy(); }
+function calculateSavings() { Calculators.calculateSavings(); }
+function convertWatts() { Calculators.convertWatts(); }
+function calculateBattery() { Calculators.calculateBattery(); }
+function calculateRoofArea() { Calculators.calculateRoofArea(); }
+function calculateTempDerate() { Calculators.calculateTempDerate(); }
+function setChartPeriod(period) {
+    const session = DataStore.session.get();
+    let customer = null;
+    if (session?.type === 'customer') {
+        const user = DataStore.users.getById(session.userId);
+        customer = DataStore.customers.getAll().find(c => c.phone === user?.phone);
+    } else {
+        customer = DataStore.customers.getAll()[0];
     }
+    if (customer) Charts.setChartPeriod(period, customer.id);
 }
-
-// Initialize search on load
-document.addEventListener('DOMContentLoaded', initSearch);
-
-// Service Worker Registration (for PWA)
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-        // Service worker registration disabled for static hosting
-        console.log('Bhaskar Solar Platform loaded');
-    });
-}
+function navigateToSection(page, section) { App.navigateToSection(section); }
