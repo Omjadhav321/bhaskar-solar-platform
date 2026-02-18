@@ -1,7 +1,7 @@
 /**
  * Bhaskar Solar Platform - Data Management Module
- * Handles all LocalStorage operations for data persistence
- * Enhanced for mobile browser compatibility
+ * Uses UniversalStorage for cross-browser compatibility
+ * Works on Chrome, Safari, Firefox, Edge, and all mobile browsers
  */
 
 const DataStore = {
@@ -17,106 +17,95 @@ const DataStore = {
         SETTINGS: 'bs_settings'
     },
 
-    // Check if localStorage is available
-    isStorageAvailable() {
-        try {
-            const test = '__storage_test__';
-            localStorage.setItem(test, test);
-            localStorage.removeItem(test);
-            return true;
-        } catch (e) {
-            console.error('localStorage not available:', e);
-            return false;
+    // Memory cache for synchronous access
+    cache: {},
+    initialized: false,
+
+    // Initialize - loads data into memory cache
+    async init() {
+        console.log('DataStore: Initializing...');
+
+        // Wait for UniversalStorage to be ready
+        await UniversalStorage.onReady(async () => {
+            // Load all data into memory cache
+            for (const key of Object.values(this.KEYS)) {
+                const data = await UniversalStorage.get(key);
+                this.cache[key] = data;
+            }
+
+            // Initialize empty arrays for missing data
+            if (!this.cache[this.KEYS.USERS]) {
+                this.cache[this.KEYS.USERS] = [];
+                await this.save(this.KEYS.USERS);
+            }
+            if (!this.cache[this.KEYS.CUSTOMERS]) {
+                this.cache[this.KEYS.CUSTOMERS] = [];
+                await this.save(this.KEYS.CUSTOMERS);
+            }
+            if (!this.cache[this.KEYS.APP_CODES]) {
+                this.cache[this.KEYS.APP_CODES] = [];
+                await this.save(this.KEYS.APP_CODES);
+            }
+            if (!this.cache[this.KEYS.DOCUMENTS]) {
+                this.cache[this.KEYS.DOCUMENTS] = [];
+                await this.save(this.KEYS.DOCUMENTS);
+            }
+            if (!this.cache[this.KEYS.MESSAGES]) {
+                this.cache[this.KEYS.MESSAGES] = [];
+                await this.save(this.KEYS.MESSAGES);
+            }
+            if (!this.cache[this.KEYS.PRODUCTION]) {
+                this.cache[this.KEYS.PRODUCTION] = [];
+                await this.save(this.KEYS.PRODUCTION);
+            }
+            if (!this.cache[this.KEYS.SETTINGS]) {
+                this.cache[this.KEYS.SETTINGS] = { theme: 'light' };
+                await this.save(this.KEYS.SETTINGS);
+            }
+
+            this.initialized = true;
+            console.log('DataStore: Initialized. Users:', this.cache[this.KEYS.USERS]);
+        });
+
+        // Also wait a bit for async init
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Double check cache is loaded
+        if (!this.cache[this.KEYS.USERS]) {
+            this.cache[this.KEYS.USERS] = [];
         }
+
+        this.initialized = true;
+        console.log('DataStore: Ready');
     },
 
-    // Initialize default data if not exists
-    init() {
-        console.log('DataStore init - Storage available:', this.isStorageAvailable());
-
-        if (!this.get(this.KEYS.USERS)) {
-            this.set(this.KEYS.USERS, []);
-        }
-
-        if (!this.get(this.KEYS.CUSTOMERS)) {
-            this.set(this.KEYS.CUSTOMERS, []);
-        }
-
-        if (!this.get(this.KEYS.APP_CODES)) {
-            this.set(this.KEYS.APP_CODES, []);
-        }
-
-        if (!this.get(this.KEYS.DOCUMENTS)) {
-            this.set(this.KEYS.DOCUMENTS, []);
-        }
-
-        if (!this.get(this.KEYS.MESSAGES)) {
-            this.set(this.KEYS.MESSAGES, []);
-        }
-
-        if (!this.get(this.KEYS.PRODUCTION)) {
-            this.set(this.KEYS.PRODUCTION, []);
-        }
-
-        if (!this.get(this.KEYS.SETTINGS)) {
-            this.set(this.KEYS.SETTINGS, { theme: 'light' });
-        }
-
-        // Verify data was saved
-        console.log('DataStore init complete. Users:', this.get(this.KEYS.USERS));
-    },
-
-    // Basic CRUD Operations with enhanced error handling
+    // Sync get from cache
     get(key) {
-        try {
-            const data = localStorage.getItem(key);
-            if (data === null || data === undefined || data === '') {
-                return null;
-            }
-            const parsed = JSON.parse(data);
-            console.log('GET', key, ':', parsed);
-            return parsed;
-        } catch (e) {
-            console.error('Error reading from localStorage:', e);
-            return null;
-        }
+        return this.cache[key] !== undefined ? this.cache[key] : null;
     },
 
+    // Sync set to cache (and async save to storage)
     set(key, value) {
-        try {
-            const serialized = JSON.stringify(value);
-            localStorage.setItem(key, serialized);
-            // Verify it was saved
-            const saved = localStorage.getItem(key);
-            if (saved === serialized) {
-                console.log('SET', key, ': SUCCESS');
-                return true;
-            } else {
-                console.error('SET', key, ': VERIFY FAILED');
-                return false;
-            }
-        } catch (e) {
-            console.error('Error writing to localStorage:', e);
-            // Try to clear some space and retry
-            try {
-                localStorage.clear();
-                localStorage.setItem(key, JSON.stringify(value));
-                return true;
-            } catch (e2) {
-                console.error('Retry failed:', e2);
-                return false;
-            }
-        }
+        this.cache[key] = value;
+        // Save asynchronously
+        UniversalStorage.set(key, value).catch(e =>
+            console.error('Failed to save', key, e)
+        );
+        return true;
     },
 
+    // Force save to storage
+    async save(key) {
+        return await UniversalStorage.set(key, this.cache[key]);
+    },
+
+    // Remove data
     remove(key) {
-        try {
-            localStorage.removeItem(key);
-            return true;
-        } catch (e) {
-            console.error('Error removing from localStorage:', e);
-            return false;
-        }
+        delete this.cache[key];
+        UniversalStorage.remove(key).catch(e =>
+            console.error('Failed to remove', key, e)
+        );
+        return true;
     },
 
     // Generate unique ID
@@ -127,8 +116,8 @@ const DataStore = {
     // Generate Application Code
     generateAppCode() {
         const year = new Date().getFullYear();
-        const existingCodes = this.get(this.KEYS.APP_CODES) || [];
-        const yearCodes = existingCodes.filter(c => c.code.includes(`BSV-${year}`));
+        const existingCodes = this.cache[this.KEYS.APP_CODES] || [];
+        const yearCodes = existingCodes.filter(c => c.code && c.code.includes(`BSV-${year}`));
         const nextNum = (yearCodes.length + 1).toString().padStart(4, '0');
         return `BSV-${year}-${nextNum}`;
     },
@@ -136,26 +125,26 @@ const DataStore = {
     // User Operations
     users: {
         getAll() {
-            return DataStore.get(DataStore.KEYS.USERS) || [];
+            return DataStore.cache[DataStore.KEYS.USERS] || [];
         },
 
         getById(id) {
-            const users = DataStore.get(DataStore.KEYS.USERS) || [];
+            const users = DataStore.cache[DataStore.KEYS.USERS] || [];
             return users.find(u => u.id === id);
         },
 
         getByPhone(phone) {
-            const users = DataStore.get(DataStore.KEYS.USERS) || [];
+            const users = DataStore.cache[DataStore.KEYS.USERS] || [];
             return users.find(u => u.phone === phone);
         },
 
         getByType(type) {
-            const users = DataStore.get(DataStore.KEYS.USERS) || [];
+            const users = DataStore.cache[DataStore.KEYS.USERS] || [];
             return users.filter(u => u.type === type);
         },
 
         create(userData) {
-            const users = DataStore.get(DataStore.KEYS.USERS) || [];
+            const users = DataStore.cache[DataStore.KEYS.USERS] || [];
             const newUser = {
                 id: DataStore.generateId(),
                 ...userData,
@@ -163,11 +152,12 @@ const DataStore = {
             };
             users.push(newUser);
             DataStore.set(DataStore.KEYS.USERS, users);
+            console.log('User created:', newUser);
             return newUser;
         },
 
         update(id, updates) {
-            const users = DataStore.get(DataStore.KEYS.USERS) || [];
+            const users = DataStore.cache[DataStore.KEYS.USERS] || [];
             const index = users.findIndex(u => u.id === id);
             if (index !== -1) {
                 users[index] = { ...users[index], ...updates, updatedAt: new Date().toISOString() };
@@ -178,45 +168,45 @@ const DataStore = {
         },
 
         delete(id) {
-            const users = DataStore.get(DataStore.KEYS.USERS) || [];
+            const users = DataStore.cache[DataStore.KEYS.USERS] || [];
             const filtered = users.filter(u => u.id !== id);
             DataStore.set(DataStore.KEYS.USERS, filtered);
             return true;
         },
 
         validateLogin(phone, password, type) {
-            const users = DataStore.get(DataStore.KEYS.USERS) || [];
+            const users = DataStore.cache[DataStore.KEYS.USERS] || [];
             return users.find(u => u.phone === phone && u.password === password && u.type === type);
         }
     },
 
-    // Customer Operations (managed by vendors)
+    // Customer Operations
     customers: {
         getAll() {
-            return DataStore.get(DataStore.KEYS.CUSTOMERS) || [];
+            return DataStore.cache[DataStore.KEYS.CUSTOMERS] || [];
         },
 
         getById(id) {
-            const customers = DataStore.get(DataStore.KEYS.CUSTOMERS) || [];
+            const customers = DataStore.cache[DataStore.KEYS.CUSTOMERS] || [];
             return customers.find(c => c.id === id);
         },
 
         getByVendor(vendorId) {
-            const customers = DataStore.get(DataStore.KEYS.CUSTOMERS) || [];
+            const customers = DataStore.cache[DataStore.KEYS.CUSTOMERS] || [];
             return customers.filter(c => c.vendorId === vendorId);
         },
 
         getByAppCode(appCode) {
-            const customers = DataStore.get(DataStore.KEYS.CUSTOMERS) || [];
+            const customers = DataStore.cache[DataStore.KEYS.CUSTOMERS] || [];
             return customers.find(c => c.appCode === appCode);
         },
 
         create(customerData) {
-            const customers = DataStore.get(DataStore.KEYS.CUSTOMERS) || [];
+            const customers = DataStore.cache[DataStore.KEYS.CUSTOMERS] || [];
             const appCode = DataStore.generateAppCode();
 
             // Create app code record
-            const appCodes = DataStore.get(DataStore.KEYS.APP_CODES) || [];
+            const appCodes = DataStore.cache[DataStore.KEYS.APP_CODES] || [];
             appCodes.push({
                 code: appCode,
                 customerId: null,
@@ -240,7 +230,7 @@ const DataStore = {
             DataStore.set(DataStore.KEYS.CUSTOMERS, customers);
 
             // Update app code with customer ID
-            const codes = DataStore.get(DataStore.KEYS.APP_CODES) || [];
+            const codes = DataStore.cache[DataStore.KEYS.APP_CODES] || [];
             const codeIndex = codes.findIndex(c => c.code === appCode);
             if (codeIndex !== -1) {
                 codes[codeIndex].customerId = newCustomer.id;
@@ -251,7 +241,7 @@ const DataStore = {
         },
 
         update(id, updates) {
-            const customers = DataStore.get(DataStore.KEYS.CUSTOMERS) || [];
+            const customers = DataStore.cache[DataStore.KEYS.CUSTOMERS] || [];
             const index = customers.findIndex(c => c.id === id);
             if (index !== -1) {
                 customers[index] = { ...customers[index], ...updates, updatedAt: new Date().toISOString() };
@@ -262,7 +252,7 @@ const DataStore = {
         },
 
         delete(id) {
-            const customers = DataStore.get(DataStore.KEYS.CUSTOMERS) || [];
+            const customers = DataStore.cache[DataStore.KEYS.CUSTOMERS] || [];
             const filtered = customers.filter(c => c.id !== id);
             DataStore.set(DataStore.KEYS.CUSTOMERS, filtered);
             return true;
@@ -275,7 +265,7 @@ const DataStore = {
                 c.name.toLowerCase().includes(q) ||
                 c.phone.includes(q) ||
                 c.appCode.toLowerCase().includes(q) ||
-                c.address.toLowerCase().includes(q)
+                (c.address && c.address.toLowerCase().includes(q))
             );
         }
     },
@@ -283,21 +273,21 @@ const DataStore = {
     // Application Code Operations
     appCodes: {
         getAll() {
-            return DataStore.get(DataStore.KEYS.APP_CODES) || [];
+            return DataStore.cache[DataStore.KEYS.APP_CODES] || [];
         },
 
         getByCode(code) {
-            const codes = DataStore.get(DataStore.KEYS.APP_CODES) || [];
+            const codes = DataStore.cache[DataStore.KEYS.APP_CODES] || [];
             return codes.find(c => c.code === code);
         },
 
         getByVendor(vendorId) {
-            const codes = DataStore.get(DataStore.KEYS.APP_CODES) || [];
+            const codes = DataStore.cache[DataStore.KEYS.APP_CODES] || [];
             return codes.filter(c => c.vendorId === vendorId);
         },
 
         updateStatus(code, status) {
-            const codes = DataStore.get(DataStore.KEYS.APP_CODES) || [];
+            const codes = DataStore.cache[DataStore.KEYS.APP_CODES] || [];
             const index = codes.findIndex(c => c.code === code);
             if (index !== -1) {
                 codes[index].status = status;
@@ -312,16 +302,16 @@ const DataStore = {
     // Document Operations
     documents: {
         getAll() {
-            return DataStore.get(DataStore.KEYS.DOCUMENTS) || [];
+            return DataStore.cache[DataStore.KEYS.DOCUMENTS] || [];
         },
 
         getById(id) {
-            const docs = DataStore.get(DataStore.KEYS.DOCUMENTS) || [];
+            const docs = DataStore.cache[DataStore.KEYS.DOCUMENTS] || [];
             return docs.find(d => d.id === id);
         },
 
         getByCustomer(customerId) {
-            const docs = DataStore.get(DataStore.KEYS.DOCUMENTS) || [];
+            const docs = DataStore.cache[DataStore.KEYS.DOCUMENTS] || [];
             return docs.filter(d => d.customerId === customerId);
         },
 
@@ -331,7 +321,7 @@ const DataStore = {
         },
 
         create(docData) {
-            const docs = DataStore.get(DataStore.KEYS.DOCUMENTS) || [];
+            const docs = DataStore.cache[DataStore.KEYS.DOCUMENTS] || [];
             const newDoc = {
                 id: DataStore.generateId(),
                 ...docData,
@@ -343,19 +333,18 @@ const DataStore = {
         },
 
         delete(id) {
-            const docs = DataStore.get(DataStore.KEYS.DOCUMENTS) || [];
+            const docs = DataStore.cache[DataStore.KEYS.DOCUMENTS] || [];
             const filtered = docs.filter(d => d.id !== id);
             DataStore.set(DataStore.KEYS.DOCUMENTS, filtered);
             return true;
         },
 
-        // Get total storage used
         getStorageUsed() {
             const docs = this.getAll();
             let total = 0;
             docs.forEach(d => {
                 if (d.data) {
-                    total += d.data.length * 0.75; // base64 is ~33% larger
+                    total += d.data.length * 0.75;
                 }
             });
             return total;
@@ -365,11 +354,11 @@ const DataStore = {
     // Message Operations
     messages: {
         getAll() {
-            return DataStore.get(DataStore.KEYS.MESSAGES) || [];
+            return DataStore.cache[DataStore.KEYS.MESSAGES] || [];
         },
 
         getConversation(userId1, userId2) {
-            const messages = DataStore.get(DataStore.KEYS.MESSAGES) || [];
+            const messages = DataStore.cache[DataStore.KEYS.MESSAGES] || [];
             return messages.filter(m =>
                 (m.fromUserId === userId1 && m.toUserId === userId2) ||
                 (m.fromUserId === userId2 && m.toUserId === userId1)
@@ -377,7 +366,7 @@ const DataStore = {
         },
 
         getUserConversations(userId) {
-            const messages = DataStore.get(DataStore.KEYS.MESSAGES) || [];
+            const messages = DataStore.cache[DataStore.KEYS.MESSAGES] || [];
             const conversationPartners = new Set();
 
             messages.forEach(m => {
@@ -389,7 +378,7 @@ const DataStore = {
         },
 
         send(fromUserId, toUserId, text) {
-            const messages = DataStore.get(DataStore.KEYS.MESSAGES) || [];
+            const messages = DataStore.cache[DataStore.KEYS.MESSAGES] || [];
             const newMessage = {
                 id: DataStore.generateId(),
                 fromUserId,
@@ -404,7 +393,7 @@ const DataStore = {
         },
 
         markAsRead(messageIds) {
-            const messages = DataStore.get(DataStore.KEYS.MESSAGES) || [];
+            const messages = DataStore.cache[DataStore.KEYS.MESSAGES] || [];
             messageIds.forEach(id => {
                 const index = messages.findIndex(m => m.id === id);
                 if (index !== -1) {
@@ -415,7 +404,7 @@ const DataStore = {
         },
 
         getUnreadCount(userId) {
-            const messages = DataStore.get(DataStore.KEYS.MESSAGES) || [];
+            const messages = DataStore.cache[DataStore.KEYS.MESSAGES] || [];
             return messages.filter(m => m.toUserId === userId && !m.read).length;
         }
     },
@@ -423,11 +412,11 @@ const DataStore = {
     // Production Data Operations
     production: {
         getAll() {
-            return DataStore.get(DataStore.KEYS.PRODUCTION) || [];
+            return DataStore.cache[DataStore.KEYS.PRODUCTION] || [];
         },
 
         getByCustomer(customerId) {
-            const data = DataStore.get(DataStore.KEYS.PRODUCTION) || [];
+            const data = DataStore.cache[DataStore.KEYS.PRODUCTION] || [];
             return data.filter(p => p.customerId === customerId);
         },
 
@@ -443,14 +432,12 @@ const DataStore = {
 
             if (existing) return existing;
 
-            // Generate realistic hourly production based on sunlight
             const hourlyData = [];
-            const baseOutput = systemCapacity * 0.85; // 85% efficiency
+            const baseOutput = systemCapacity * 0.85;
 
             for (let hour = 5; hour <= 19; hour++) {
-                // Simulate sun position (peak at noon)
                 const sunFactor = Math.sin((hour - 5) * Math.PI / 14);
-                const weatherFactor = 0.8 + Math.random() * 0.4; // 80-120% weather impact
+                const weatherFactor = 0.8 + Math.random() * 0.4;
                 const output = baseOutput * sunFactor * weatherFactor * (1/24);
 
                 hourlyData.push({
@@ -471,7 +458,7 @@ const DataStore = {
                 createdAt: new Date().toISOString()
             };
 
-            const production = DataStore.get(DataStore.KEYS.PRODUCTION) || [];
+            const production = DataStore.cache[DataStore.KEYS.PRODUCTION] || [];
             production.push(newEntry);
             DataStore.set(DataStore.KEYS.PRODUCTION, production);
 
@@ -529,7 +516,7 @@ const DataStore = {
 
             const totalThisMonth = thisMonth.reduce((sum, p) => sum + p.dailyTotal, 0);
             const totalAllTime = data.reduce((sum, p) => sum + p.dailyTotal, 0);
-            const co2Saved = totalAllTime * 0.85; // ~0.85 kg CO2 per kWh
+            const co2Saved = totalAllTime * 0.85;
 
             return {
                 today: today ? today.dailyTotal : 0,
@@ -552,16 +539,13 @@ const DataStore = {
                 phone: user.phone,
                 loginTime: new Date().toISOString()
             };
-            const success = DataStore.set(DataStore.KEYS.SESSION, session);
-            console.log('Session save result:', success);
+            DataStore.set(DataStore.KEYS.SESSION, session);
             console.log('Session saved:', session);
             return session;
         },
 
         get() {
-            const session = DataStore.get(DataStore.KEYS.SESSION);
-            console.log('Getting session:', session);
-            return session;
+            return DataStore.cache[DataStore.KEYS.SESSION] || null;
         },
 
         isLoggedIn() {
@@ -570,7 +554,7 @@ const DataStore = {
         },
 
         logout() {
-            console.log('Logging out, removing session');
+            console.log('Logging out');
             DataStore.remove(DataStore.KEYS.SESSION);
         }
     },
@@ -578,7 +562,7 @@ const DataStore = {
     // Settings
     settings: {
         get() {
-            return DataStore.get(DataStore.KEYS.SETTINGS) || { theme: 'light' };
+            return DataStore.cache[DataStore.KEYS.SETTINGS] || { theme: 'light' };
         },
 
         update(updates) {
@@ -593,13 +577,9 @@ const DataStore = {
         }
     },
 
-    // Clear all data (for testing/reset)
+    // Clear all data
     clearAll() {
-        Object.values(this.KEYS).forEach(key => {
-            localStorage.removeItem(key);
-        });
+        this.cache = {};
+        UniversalStorage.clearAll();
     }
 };
-
-// Initialize data store when script loads
-DataStore.init();
