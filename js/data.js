@@ -25,43 +25,52 @@ const DataStore = {
     async init() {
         console.log('DataStore: Initializing...');
 
-        // Wait for UniversalStorage to be ready
-        await UniversalStorage.onReady();
+        try {
+            // Wait for UniversalStorage to be ready
+            await UniversalStorage.onReady();
+        } catch (e) {
+            console.warn('UniversalStorage not ready, continuing with fallback:', e);
+        }
 
         // Load all data into memory cache
         for (const key of Object.values(this.KEYS)) {
-            const data = await UniversalStorage.get(key);
-            this.cache[key] = data;
+            try {
+                const data = await UniversalStorage.get(key);
+                this.cache[key] = data;
+            } catch (e) {
+                console.warn('Could not load key from storage:', key, e);
+                this.cache[key] = null;
+            }
         }
 
         // Initialize empty arrays for missing data
         if (!this.cache[this.KEYS.USERS]) {
             this.cache[this.KEYS.USERS] = [];
-            await this.save(this.KEYS.USERS);
+            try { await this.save(this.KEYS.USERS); } catch (e) { console.warn('Could not save USERS:', e); }
         }
         if (!this.cache[this.KEYS.CUSTOMERS]) {
             this.cache[this.KEYS.CUSTOMERS] = [];
-            await this.save(this.KEYS.CUSTOMERS);
+            try { await this.save(this.KEYS.CUSTOMERS); } catch (e) { console.warn('Could not save CUSTOMERS:', e); }
         }
         if (!this.cache[this.KEYS.APP_CODES]) {
             this.cache[this.KEYS.APP_CODES] = [];
-            await this.save(this.KEYS.APP_CODES);
+            try { await this.save(this.KEYS.APP_CODES); } catch (e) { console.warn('Could not save APP_CODES:', e); }
         }
         if (!this.cache[this.KEYS.DOCUMENTS]) {
             this.cache[this.KEYS.DOCUMENTS] = [];
-            await this.save(this.KEYS.DOCUMENTS);
+            try { await this.save(this.KEYS.DOCUMENTS); } catch (e) { console.warn('Could not save DOCUMENTS:', e); }
         }
         if (!this.cache[this.KEYS.MESSAGES]) {
             this.cache[this.KEYS.MESSAGES] = [];
-            await this.save(this.KEYS.MESSAGES);
+            try { await this.save(this.KEYS.MESSAGES); } catch (e) { console.warn('Could not save MESSAGES:', e); }
         }
         if (!this.cache[this.KEYS.PRODUCTION]) {
             this.cache[this.KEYS.PRODUCTION] = [];
-            await this.save(this.KEYS.PRODUCTION);
+            try { await this.save(this.KEYS.PRODUCTION); } catch (e) { console.warn('Could not save PRODUCTION:', e); }
         }
         if (!this.cache[this.KEYS.SETTINGS]) {
             this.cache[this.KEYS.SETTINGS] = { theme: 'light' };
-            await this.save(this.KEYS.SETTINGS);
+            try { await this.save(this.KEYS.SETTINGS); } catch (e) { console.warn('Could not save SETTINGS:', e); }
         }
 
         // Load session from localStorage for immediate access
@@ -531,31 +540,67 @@ const DataStore = {
     // Session Management
     session: {
         login(user) {
-            console.log('Creating session for user:', user.name);
-            const session = {
-                userId: user.id,
-                type: user.type,
-                name: user.name,
-                phone: user.phone,
-                loginTime: new Date().toISOString()
-            };
-            DataStore.set(DataStore.KEYS.SESSION, session);
-            console.log('Session saved:', session);
-            return session;
+            try {
+                console.log('Creating session for user:', user?.name);
+                const session = {
+                    userId: user.id,
+                    type: user.type,
+                    name: user.name,
+                    phone: user.phone,
+                    loginTime: new Date().toISOString()
+                };
+                DataStore.set(DataStore.KEYS.SESSION, session);
+                // Also save directly to localStorage for immediate access
+                try {
+                    localStorage.setItem('bs_session', JSON.stringify(session));
+                } catch (e) {
+                    console.warn('Could not save session to localStorage:', e);
+                }
+                console.log('Session saved:', session);
+                return session;
+            } catch (e) {
+                console.error('Error creating session:', e);
+                return null;
+            }
         },
 
         get() {
-            return DataStore.cache[DataStore.KEYS.SESSION] || null;
+            try {
+                let session = DataStore.cache[DataStore.KEYS.SESSION];
+                if (!session) {
+                    // Try loading from localStorage
+                    const data = localStorage.getItem('bs_session');
+                    if (data) {
+                        session = JSON.parse(data);
+                        DataStore.cache[DataStore.KEYS.SESSION] = session;
+                    }
+                }
+                return session || null;
+            } catch (e) {
+                console.warn('Error getting session:', e);
+                return null;
+            }
         },
 
         isLoggedIn() {
-            const session = this.get();
-            return !!(session && session.userId);
+            try {
+                const session = this.get();
+                return !!(session && session.userId);
+            } catch (e) {
+                return false;
+            }
         },
 
         logout() {
-            console.log('Logging out');
-            DataStore.remove(DataStore.KEYS.SESSION);
+            try {
+                console.log('Logging out');
+                DataStore.remove(DataStore.KEYS.SESSION);
+                localStorage.removeItem('bs_session');
+            } catch (e) {
+                console.warn('Error during logout:', e);
+                // Force clear from cache
+                delete DataStore.cache[DataStore.KEYS.SESSION];
+            }
         }
     },
 

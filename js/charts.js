@@ -21,7 +21,11 @@ const Charts = {
 
     // Initialize charts
     init() {
-        this.createGradient();
+        try {
+            this.createGradient();
+        } catch (e) {
+            console.warn('Charts init error:', e);
+        }
     },
 
     createGradient() {
@@ -31,69 +35,77 @@ const Charts = {
 
     // Render production chart
     renderProductionChart(containerId, data, period = 'week') {
-        const container = document.getElementById(containerId);
-        if (!container) return;
+        try {
+            const container = document.getElementById(containerId);
+            if (!container) return;
 
-        this.currentPeriod = period;
+            this.currentPeriod = period;
 
-        let chartData;
-        let labels;
+            let chartData;
+            let labels;
 
-        if (period === 'day') {
-            // Hourly data for today
-            const hourlyData = data.hourlyData || this.generateHourlyData();
-            chartData = hourlyData.map(h => h.output);
-            labels = hourlyData.map(h => `${h.hour}:00`);
-        } else if (period === 'week') {
-            // Last 7 days
-            const weekData = data.weekData || this.generateWeekData();
-            chartData = weekData.map(d => d.total);
-            labels = weekData.map(d => d.dayName);
-        } else {
-            // Last 30 days
-            const monthData = data.monthData || this.generateMonthData();
-            chartData = monthData.map(d => d.total);
-            labels = monthData.map((d, i) => i % 5 === 0 ? d.date.split('-')[2] : '');
+            if (period === 'day') {
+                // Hourly data for today
+                const hourlyData = data.hourlyData || this.generateHourlyData();
+                chartData = hourlyData.map(h => h.output);
+                labels = hourlyData.map(h => `${h.hour}:00`);
+            } else if (period === 'week') {
+                // Last 7 days
+                const weekData = data.weekData || this.generateWeekData();
+                chartData = weekData.map(d => d.total);
+                labels = weekData.map(d => d.dayName);
+            } else {
+                // Last 30 days
+                const monthData = data.monthData || this.generateMonthData();
+                chartData = monthData.map(d => d.total);
+                labels = monthData.map((d, i) => i % 5 === 0 ? d.date.split('-')[2] : '');
+            }
+
+            this.renderBarChart(container, chartData, labels, 'kWh');
+        } catch (e) {
+            console.error('Error rendering production chart:', e);
         }
-
-        this.renderBarChart(container, chartData, labels, 'kWh');
     },
 
     // Render bar chart
     renderBarChart(container, data, labels, unit) {
-        const maxValue = Math.max(...data) || 1;
+        try {
+            const maxValue = Math.max(...data) || 1;
 
-        // Create chart HTML
-        let html = '<div class="chart-bars">';
+            // Create chart HTML
+            let html = '<div class="chart-bars">';
 
-        data.forEach((value, index) => {
-            const height = (value / maxValue) * 100;
-            const isToday = index === data.length - 1;
+            data.forEach((value, index) => {
+                const height = (value / maxValue) * 100;
+                const isToday = index === data.length - 1;
 
-            html += `
-                <div class="chart-bar-container">
-                    <div class="chart-bar-wrapper">
-                        <div class="chart-bar ${isToday ? 'highlight' : ''}"
-                             style="height: 0%"
-                             data-target-height="${height}">
-                            <span class="chart-bar-value">${value.toFixed(1)}</span>
+                html += `
+                    <div class="chart-bar-container">
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-bar ${isToday ? 'highlight' : ''}"
+                                 style="height: 0%"
+                                 data-target-height="${height}">
+                                <span class="chart-bar-value">${value.toFixed(1)}</span>
+                            </div>
                         </div>
+                        <span class="chart-bar-label">${labels[index]}</span>
                     </div>
-                    <span class="chart-bar-label">${labels[index]}</span>
-                </div>
-            `;
-        });
-
-        html += '</div>';
-        container.innerHTML = html;
-
-        // Animate bars
-        setTimeout(() => {
-            container.querySelectorAll('.chart-bar').forEach(bar => {
-                const targetHeight = bar.dataset.targetHeight;
-                bar.style.height = targetHeight + '%';
+                `;
             });
-        }, 100);
+
+            html += '</div>';
+            container.innerHTML = html;
+
+            // Animate bars
+            setTimeout(() => {
+                container.querySelectorAll('.chart-bar').forEach(bar => {
+                    const targetHeight = bar.dataset.targetHeight;
+                    bar.style.height = targetHeight + '%';
+                });
+            }, 100);
+        } catch (e) {
+            console.error('Error rendering bar chart:', e);
+        }
     },
 
     // Generate simulated hourly data
