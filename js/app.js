@@ -1,32 +1,56 @@
 /**
  * Bhaskar Solar Platform - Main Application Module
+ * Enhanced for mobile browser compatibility
  */
 
 const App = {
     session: null,
 
     init() {
-        console.log('App initializing...');
+        console.log('=== App initializing ===');
+        console.log('User Agent:', navigator.userAgent);
+        console.log('Platform:', navigator.platform);
+
+        // Check localStorage availability
+        if (!DataStore.isStorageAvailable()) {
+            alert('Warning: Local storage is not available. Data will not persist.');
+        }
+
         DataStore.init();
 
         // Debug: Check what's in localStorage
-        console.log('LocalStorage contents:', {
-            users: localStorage.getItem('bs_users'),
-            session: localStorage.getItem('bs_session')
-        });
+        console.log('=== LocalStorage Check ===');
+        console.log('bs_users:', localStorage.getItem('bs_users'));
+        console.log('bs_session:', localStorage.getItem('bs_session'));
+        console.log('bs_customers:', localStorage.getItem('bs_customers'));
 
+        // Get session
         this.session = DataStore.session.get();
+        console.log('=== Session Check ===');
         console.log('Session restored:', this.session);
 
-        if (this.session) {
-            console.log('Found session, showing dashboard');
-            this.showDashboard();
+        if (this.session && this.session.userId) {
+            // Verify user still exists
+            const user = DataStore.users.getById(this.session.userId);
+            console.log('User for session:', user);
+
+            if (user) {
+                console.log('✓ Valid session, showing dashboard');
+                this.showDashboard();
+            } else {
+                console.log('✗ Invalid session (user not found), clearing and showing login');
+                DataStore.session.logout();
+                this.session = null;
+                this.showPage('loginPage');
+            }
         } else {
-            console.log('No session, showing login');
+            console.log('✗ No session, showing login');
             this.showPage('loginPage');
         }
+
         this.bindEvents();
         this.applyTheme();
+        console.log('=== App init complete ===');
     },
 
     bindEvents() {

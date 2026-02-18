@@ -1,6 +1,7 @@
 /**
  * Bhaskar Solar Platform - Data Management Module
  * Handles all LocalStorage operations for data persistence
+ * Enhanced for mobile browser compatibility
  */
 
 const DataStore = {
@@ -16,8 +17,23 @@ const DataStore = {
         SETTINGS: 'bs_settings'
     },
 
+    // Check if localStorage is available
+    isStorageAvailable() {
+        try {
+            const test = '__storage_test__';
+            localStorage.setItem(test, test);
+            localStorage.removeItem(test);
+            return true;
+        } catch (e) {
+            console.error('localStorage not available:', e);
+            return false;
+        }
+    },
+
     // Initialize default data if not exists
     init() {
+        console.log('DataStore init - Storage available:', this.isStorageAvailable());
+
         if (!this.get(this.KEYS.USERS)) {
             this.set(this.KEYS.USERS, []);
         }
@@ -45,13 +61,21 @@ const DataStore = {
         if (!this.get(this.KEYS.SETTINGS)) {
             this.set(this.KEYS.SETTINGS, { theme: 'light' });
         }
+
+        // Verify data was saved
+        console.log('DataStore init complete. Users:', this.get(this.KEYS.USERS));
     },
 
-    // Basic CRUD Operations
+    // Basic CRUD Operations with enhanced error handling
     get(key) {
         try {
             const data = localStorage.getItem(key);
-            return data ? JSON.parse(data) : null;
+            if (data === null || data === undefined || data === '') {
+                return null;
+            }
+            const parsed = JSON.parse(data);
+            console.log('GET', key, ':', parsed);
+            return parsed;
         } catch (e) {
             console.error('Error reading from localStorage:', e);
             return null;
@@ -60,11 +84,28 @@ const DataStore = {
 
     set(key, value) {
         try {
-            localStorage.setItem(key, JSON.stringify(value));
-            return true;
+            const serialized = JSON.stringify(value);
+            localStorage.setItem(key, serialized);
+            // Verify it was saved
+            const saved = localStorage.getItem(key);
+            if (saved === serialized) {
+                console.log('SET', key, ': SUCCESS');
+                return true;
+            } else {
+                console.error('SET', key, ': VERIFY FAILED');
+                return false;
+            }
         } catch (e) {
             console.error('Error writing to localStorage:', e);
-            return false;
+            // Try to clear some space and retry
+            try {
+                localStorage.clear();
+                localStorage.setItem(key, JSON.stringify(value));
+                return true;
+            } catch (e2) {
+                console.error('Retry failed:', e2);
+                return false;
+            }
         }
     },
 
@@ -503,25 +544,33 @@ const DataStore = {
     // Session Management
     session: {
         login(user) {
+            console.log('Creating session for user:', user.name);
             const session = {
                 userId: user.id,
                 type: user.type,
                 name: user.name,
+                phone: user.phone,
                 loginTime: new Date().toISOString()
             };
-            DataStore.set(DataStore.KEYS.SESSION, session);
+            const success = DataStore.set(DataStore.KEYS.SESSION, session);
+            console.log('Session save result:', success);
+            console.log('Session saved:', session);
             return session;
         },
 
         get() {
-            return DataStore.get(DataStore.KEYS.SESSION);
+            const session = DataStore.get(DataStore.KEYS.SESSION);
+            console.log('Getting session:', session);
+            return session;
         },
 
         isLoggedIn() {
-            return !!this.get();
+            const session = this.get();
+            return !!(session && session.userId);
         },
 
         logout() {
+            console.log('Logging out, removing session');
             DataStore.remove(DataStore.KEYS.SESSION);
         }
     },
