@@ -66,22 +66,39 @@ const App = {
     },
 
     bindEvents() {
+        // Login tab switching
         document.querySelectorAll('.login-tabs .tab-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => this.switchLoginTab(e.target.dataset.tab));
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tab = e.currentTarget.dataset.tab;
+                console.log('Tab clicked:', tab);
+                this.switchLoginTab(tab);
+            });
         });
+
+        // Navigation buttons
         document.querySelectorAll('.nav-btn, .bottom-nav-item').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                e.preventDefault();
                 if (e.currentTarget.dataset.section) {
                     this.navigateToSection(e.currentTarget.dataset.section);
                 }
             });
         });
+
+        // Document tabs
         document.querySelectorAll('.doc-tab').forEach(btn => {
-            btn.addEventListener('click', (e) => this.switchDocTab(e.target.dataset.docTab));
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.switchDocTab(e.target.dataset.docTab);
+            });
         });
+
+        console.log('Events bound successfully');
     },
 
     switchLoginTab(tab) {
+        console.log('Switching to tab:', tab);
         document.querySelectorAll('.login-tabs .tab-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tab === tab);
         });
@@ -541,6 +558,7 @@ document.addEventListener('DOMContentLoaded', () => App.init().catch(err => cons
 
 function doCustomerLogin() { App.doCustomerLogin(); }
 function doVendorLogin() { App.doVendorLogin(); }
+function switchLoginTab(tab) { App.switchLoginTab(tab); }
 function logout() { App.logout(); }
 function toggleMobileMenu() { App.toggleMobileMenu(); }
 function closeMobileMenu() { App.closeMobileMenu(); }
