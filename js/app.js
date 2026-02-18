@@ -6,11 +6,23 @@ const App = {
     session: null,
 
     init() {
+        console.log('App initializing...');
         DataStore.init();
+
+        // Debug: Check what's in localStorage
+        console.log('LocalStorage contents:', {
+            users: localStorage.getItem('bs_users'),
+            session: localStorage.getItem('bs_session')
+        });
+
         this.session = DataStore.session.get();
+        console.log('Session restored:', this.session);
+
         if (this.session) {
+            console.log('Found session, showing dashboard');
             this.showDashboard();
         } else {
+            console.log('No session, showing login');
             this.showPage('loginPage');
         }
         this.bindEvents();
@@ -95,12 +107,17 @@ const App = {
         if (!code) { this.showToast('Please enter your access code', 'warning'); return; }
 
         const user = DataStore.users.validateLogin(phone, code, 'vendor');
+        console.log('Login attempt - user found:', user);
+
         if (!user) {
             this.showToast('Invalid credentials. Please check your phone and access code.', 'error');
             return;
         }
 
         this.session = DataStore.session.login(user);
+        console.log('Session created:', this.session);
+        console.log('Session in localStorage:', localStorage.getItem('bs_session'));
+
         this.showToast('Welcome, ' + user.name + '!', 'success');
         this.showDashboard();
     },
@@ -134,6 +151,9 @@ const App = {
             address: address || 'Not provided',
             password: password
         });
+
+        console.log('User created:', user);
+        console.log('All users after registration:', DataStore.users.getAll());
 
         this.showToast('Registration successful! Please login.', 'success');
         this.closeModal('vendorRegisterModal');
