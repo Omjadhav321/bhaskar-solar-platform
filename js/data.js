@@ -19,19 +19,7 @@ const DataStore = {
     // Initialize default data if not exists
     init() {
         if (!this.get(this.KEYS.USERS)) {
-            // Create default vendor account
-            const defaultVendor = {
-                id: this.generateId(),
-                type: 'vendor',
-                vendorId: 'VND-001',
-                name: 'Complete Solar Solutions',
-                phone: '9876543210',
-                email: 'info@completesolar.com',
-                address: '456 Solar Avenue, Tech Park, Mumbai 400001',
-                password: 'vendor123',
-                createdAt: new Date().toISOString()
-            };
-            this.set(this.KEYS.USERS, [defaultVendor]);
+            this.set(this.KEYS.USERS, []);
         }
 
         if (!this.get(this.KEYS.CUSTOMERS)) {

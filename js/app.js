@@ -87,13 +87,58 @@ const App = {
 
         const user = DataStore.users.validateLogin(phone, code, 'vendor');
         if (!user) {
-            this.showToast('Invalid credentials. Try: 9876543210 / vendor123', 'error');
+            this.showToast('Invalid credentials. Please check your phone and access code.', 'error');
             return;
         }
 
         this.session = DataStore.session.login(user);
         this.showToast('Welcome, ' + user.name + '!', 'success');
         this.showDashboard();
+    },
+
+    registerVendor() {
+        const name = document.getElementById('registerVendorName')?.value.trim();
+        const phone = document.getElementById('registerVendorPhone')?.value.trim();
+        const email = document.getElementById('registerVendorEmail')?.value.trim();
+        const address = document.getElementById('registerVendorAddress')?.value.trim();
+        const password = document.getElementById('registerVendorPassword')?.value;
+        const confirmPassword = document.getElementById('registerVendorConfirmPassword')?.value;
+
+        if (!name) { this.showToast('Please enter your business name', 'warning'); return; }
+        if (!phone || phone.length < 10) { this.showToast('Please enter a valid phone number', 'warning'); return; }
+        if (!password || password.length < 4) { this.showToast('Password must be at least 4 characters', 'warning'); return; }
+        if (password !== confirmPassword) { this.showToast('Passwords do not match', 'warning'); return; }
+
+        // Check if phone already exists
+        const existingUser = DataStore.users.getByPhone(phone);
+        if (existingUser) {
+            this.showToast('This phone number is already registered', 'error');
+            return;
+        }
+
+        // Create vendor account
+        const user = DataStore.users.create({
+            type: 'vendor',
+            name: name,
+            phone: phone,
+            email: email || '',
+            address: address || 'Not provided',
+            password: password
+        });
+
+        this.showToast('Registration successful! Please login.', 'success');
+        this.closeModal('vendorRegisterModal');
+
+        // Clear registration form
+        document.getElementById('registerVendorName').value = '';
+        document.getElementById('registerVendorPhone').value = '';
+        document.getElementById('registerVendorEmail').value = '';
+        document.getElementById('registerVendorAddress').value = '';
+        document.getElementById('registerVendorPassword').value = '';
+        document.getElementById('registerVendorConfirmPassword').value = '';
+
+        // Switch to vendor login tab
+        this.switchLoginTab('vendor');
     },
 
     logout() {
